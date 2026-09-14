@@ -1,7 +1,8 @@
 # Visual Intent Agent MVP v0.2 — 架构设计（冻结）
 
 版本：architecture/v1（Step 00 架构基线）
-依据：根目录 11 份任务书（01～11）、README.md、AGENT_DISPATCH_PROMPTS.md、
+依据：`docs/task_books/` 中的 11 份任务书（01～11）、README.md、
+`docs/task_books/AGENT_DISPATCH_PROMPTS.md`、
 `../visual_intent_agent_mvp_design_v0.1.md`、api.md（凭据，只引用不复制）。
 
 本文是 Step 01～09 实现 Agent 的唯一架构依据。任务书与本文冲突时，以任务书的
@@ -18,9 +19,7 @@
 
 ```text
 image_system/
-├── README.md                      # 任务索引（既有，只读）
-├── 01_domain_contracts.md ～ 11_knowledge_engine_gate_b.md   # 任务书（既有，只读，保留在根目录）
-├── AGENT_DISPATCH_PROMPTS.md      # 派发提示词（既有，只读）
+├── README.md                      # 项目入口与任务索引
 ├── api.md                         # Provider 凭据源（既有，只读；内容只准进入 .env）
 ├── pyproject.toml                 # 依赖 + pytest 配置（已建）
 ├── uv.lock                        # uv 锁文件（已建）
@@ -29,6 +28,9 @@ image_system/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md            # 本文件
+│   ├── task_books/                # 分步任务书与 Agent 派发提示词
+│   │   ├── 01_domain_contracts.md … 11_knowledge_engine_gate_b.md
+│   │   └── AGENT_DISPATCH_PROMPTS.md
 │   └── handoffs/                  # 各 Step 交接记录（统一格式）
 │       ├── step_00_architecture_handoff.md
 │       └── step_01_handoff.md … step_09_handoff.md   # 由各实现 Agent 填写

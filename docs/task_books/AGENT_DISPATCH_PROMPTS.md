@@ -80,4 +80,3 @@
 ```text
 只有 Gate A 明确为 Go 时，请执行 Step 11《KnowledgeEngine 与 Gate B》。以 JSONL 为权威源，用 100～300 条以内审核知识和 Milvus Lite 建立最小 RAG，保证 Knowledge 不修改 Intent，并完成 B/C 消融实验。若无稳定增益，明确建议移除 RAG，不扩充知识库。
 ```
-

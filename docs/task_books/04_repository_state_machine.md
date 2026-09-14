@@ -151,4 +151,3 @@ Step 06 需要获得：
 - 状态迁移表；
 - Confirmation 有效性检查；
 - 可用于端到端测试的临时 SQLite fixture。
-

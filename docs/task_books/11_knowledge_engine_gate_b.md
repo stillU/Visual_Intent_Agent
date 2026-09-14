@@ -169,4 +169,3 @@ C = Visual Intent Agent + RAG
 - 不加入 Hybrid Search、Reranker 或 GraphRAG；
 - 不扩充未验证的大规模知识库；
 - 不继续 P5 或更多架构阶段。
-

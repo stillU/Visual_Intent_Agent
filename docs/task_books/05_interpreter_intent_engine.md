@@ -139,4 +139,3 @@ Step 06 需要获得：
 - IntentResolution；
 - Interpreter 的错误类型；
 - Fake Provider 测试夹具。
-

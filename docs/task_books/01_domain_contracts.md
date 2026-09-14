@@ -200,4 +200,3 @@ Step 02 必须获得：
 - `VisualIntent` 和 `IntentDelta` 类型；
 - Resolution、Issue、Evidence 的公开接口；
 - Schema v1 fixture。
-

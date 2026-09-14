@@ -163,4 +163,3 @@ Step 07 需要获得：
 - ExecutionRevision；
 - 有效 ConfirmationRecord；
 - 从 Repository 读取确认快照的应用层接口。
-

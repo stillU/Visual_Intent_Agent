@@ -172,4 +172,3 @@ Step 04 和 Step 05 需要获得：
 - `assess(intent, execution_context)`；
 - `IntentResolution`；
 - 决策优先级与 golden tests。
-

@@ -128,4 +128,3 @@ Step 09 需要获得：
 - 精确关联生成结果的反馈入口；
 - retry 和失败状态；
 - Fake Image Provider 测试夹具。
-

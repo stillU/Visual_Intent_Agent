@@ -155,4 +155,3 @@ Step 03 需要获得：
 - ValidationResult；
 - ChangeSummary；
 - 全部状态不变量测试。
-
