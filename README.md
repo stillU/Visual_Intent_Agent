@@ -28,7 +28,7 @@ SQLite Repository 保存 Intent、确认记录、Prompt、生成结果和反馈�
 
 ## 当前状态
 
-MVP v0.2 已完成从意图理解到多轮图片修改的核心闭环。下一阶段通过 Gate A 与 Direct LLM 基线进行对照评测，再决定是否继续引入 KnowledgeEngine。
+MVP v0.2 已完成从意图理解到多轮图片修改的核心闭环。MVP v0.3 进入“验证与可用化”阶段：先通过 Gate A 与 Direct LLM 基线进行对照评测，再根据结果做定向修正并提供最小可运行入口。
 
 ## 文档
 

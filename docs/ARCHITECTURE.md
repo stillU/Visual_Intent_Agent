@@ -30,10 +30,11 @@ image_system/
 │   ├── ARCHITECTURE.md            # 本文件
 │   ├── task_books/                # 按版本归档的实施任务书
 │   │   ├── README.md              # 版本任务书索引与归档约定
-│   │   └── mvp_v0.2/
-│   │       ├── README.md          # MVP v0.2 任务索引
-│   │       ├── 01_domain_contracts.md … 11_knowledge_engine_gate_b.md
-│   │       └── AGENT_DISPATCH_PROMPTS.md
+│   │   ├── mvp_v0.2/
+│   │   │   ├── README.md          # MVP v0.2 任务索引
+│   │   │   ├── 01_domain_contracts.md … 11_knowledge_engine_gate_b.md
+│   │   │   └── AGENT_DISPATCH_PROMPTS.md
+│   │   └── mvp_v0.3/              # Gate A、定向修正与最小 CLI 任务书
 │   └── handoffs/                  # 各 Step 交接记录（统一格式）
 │       ├── step_00_architecture_handoff.md
 │       └── step_01_handoff.md … step_09_handoff.md   # 由各实现 Agent 填写
