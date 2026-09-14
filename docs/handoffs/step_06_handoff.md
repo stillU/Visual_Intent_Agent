@@ -4,14 +4,14 @@
 Interpreter / IntentEngine，实现单问题澄清、diff-first 确认摘要、revision/hash 绑定与
 Hard Confirmation Gate；完成 P1 端到端测试；**不实现 PromptEngine、不调用图像 Provider**）
 
-- 依据：`06_clarification_confirmation_workflow.md`（任务书）、`README.md`（10 条全局不变量）、
+- 依据：`docs/task_books/mvp_v0.2/06_clarification_confirmation_workflow.md`（任务书）、`docs/task_books/mvp_v0.2/README.md`（10 条全局不变量）、
   `docs/ARCHITECTURE.md` 第 4 节「Step 06 — workflow」冻结表 / 5.1 ID 前缀 / 5.5 code 命名空间 /
   7 节测试策略（Rev.1）、`docs/handoffs/step_03/04/05_handoff.md`、
   `docs/handoffs/architecture_decision_001.md`（Rev.1 第 11 条迁移）、`step_04_patch_001.md`。
 - 范围纪律：只新增 `visual_intent_agent/workflow/**`、`tests/workflow/**`、`tests/e2e/**`
   与本文件；未修改任何上游或既有文件（`domain/`、`validation/`、`policy/`、`persistence/`、
-  `intent_engine/`、`providers/`、`config.py`、`pyproject.toml`、`uv.lock`、`.env`、根目录任务书、
-  `README.md`、`docs/ARCHITECTURE.md`）；无新增依赖（只用 pydantic + stdlib 的 hashlib/json）。
+  `intent_engine/`、`providers/`、`config.py`、`pyproject.toml`、`uv.lock`、`.env`、MVP v0.2 任务书、
+  MVP v0.2 任务索引、`docs/ARCHITECTURE.md`）；无新增依赖（只用 pydantic + stdlib 的 hashlib/json）。
 
 ---
 
@@ -154,7 +154,7 @@ class SubmitMessageOutcome(BaseModel):  # frozen + extra=forbid
 未新增 `conftest.py`；两个新测试目录都不 `from conftest import ...`，也不跨目录 import
 （pytest 只把每个测试目录自身加入 `sys.path`，e2e helper 是同内容目录内副本）。
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、
 `docs/ARCHITECTURE.md`、`visual_intent_agent/{domain,validation,policy,persistence,
 intent_engine,providers,config.py}`、`tests/{domain,validation,policy,persistence,
 providers,intent_engine,smoke,fixtures}`、`tests/conftest.py`、`tests/test_sanity.py`、

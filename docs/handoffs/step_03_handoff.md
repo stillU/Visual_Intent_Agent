@@ -106,7 +106,7 @@
 - `tests/fixtures/policy_cases/`：上述 9 个 JSON
 - `docs/handoffs/step_03_handoff.md`（本文件）
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、`docs/ARCHITECTURE.md`、`visual_intent_agent/domain/**`、`config.py`、`validation/**`、`tests/conftest.py`、`tests/test_sanity.py`、`tests/domain/**`、`tests/validation/**`、`tests/fixtures/schema_v1/**`、`pyproject.toml`、`uv.lock`、`.env`。**无新增依赖**（policy 只 import `pydantic` 与 `visual_intent_agent.domain`）。
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、`docs/ARCHITECTURE.md`、`visual_intent_agent/domain/**`、`config.py`、`validation/**`、`tests/conftest.py`、`tests/test_sanity.py`、`tests/domain/**`、`tests/validation/**`、`tests/fixtures/schema_v1/**`、`pyproject.toml`、`uv.lock`、`.env`。**无新增依赖**（policy 只 import `pydantic` 与 `visual_intent_agent.domain`）。
 
 ## 公开接口
 

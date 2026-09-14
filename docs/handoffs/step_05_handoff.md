@@ -69,7 +69,7 @@
 - `tests/smoke/test_llm_smoke.py`
 - `docs/handoffs/step_05_handoff.md`（本文件）
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、`docs/ARCHITECTURE.md`、`domain/**`、`validation/**`、`policy/**`、`persistence/**`、`config.py`、`pyproject.toml`、`uv.lock`、`.env`、`tests/conftest.py`、`tests/test_sanity.py`、既有测试与 fixture。**无新增依赖**（仅用已装的 pydantic / httpx / pytest）。源码、测试、本文档中无明文 key（已用 `.env` 中 key 全文 grep 上述新文件，0 命中）。
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、`docs/ARCHITECTURE.md`、`domain/**`、`validation/**`、`policy/**`、`persistence/**`、`config.py`、`pyproject.toml`、`uv.lock`、`.env`、`tests/conftest.py`、`tests/test_sanity.py`、既有测试与 fixture。**无新增依赖**（仅用已装的 pydantic / httpx / pytest）。源码、测试、本文档中无明文 key（已用 `.env` 中 key 全文 grep 上述新文件，0 命中）。
 
 ## 公开接口
 

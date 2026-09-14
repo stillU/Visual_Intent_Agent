@@ -1,8 +1,8 @@
 # Visual Intent Agent MVP v0.2 — 架构设计（冻结）
 
 版本：architecture/v1（Step 00 架构基线）
-依据：`docs/task_books/` 中的 11 份任务书（01～11）、README.md、
-`docs/task_books/AGENT_DISPATCH_PROMPTS.md`、
+依据：`docs/task_books/mvp_v0.2/` 中的 11 份任务书（01～11）与任务索引、
+`docs/task_books/mvp_v0.2/AGENT_DISPATCH_PROMPTS.md`、
 `../visual_intent_agent_mvp_design_v0.1.md`、api.md（凭据，只引用不复制）。
 
 本文是 Step 01～09 实现 Agent 的唯一架构依据。任务书与本文冲突时，以任务书的
@@ -19,7 +19,7 @@
 
 ```text
 image_system/
-├── README.md                      # 项目入口与任务索引
+├── README.md                      # 项目介绍与架构概览
 ├── api.md                         # Provider 凭据源（既有，只读；内容只准进入 .env）
 ├── pyproject.toml                 # 依赖 + pytest 配置（已建）
 ├── uv.lock                        # uv 锁文件（已建）
@@ -28,9 +28,12 @@ image_system/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md            # 本文件
-│   ├── task_books/                # 分步任务书与 Agent 派发提示词
-│   │   ├── 01_domain_contracts.md … 11_knowledge_engine_gate_b.md
-│   │   └── AGENT_DISPATCH_PROMPTS.md
+│   ├── task_books/                # 按版本归档的实施任务书
+│   │   ├── README.md              # 版本任务书索引与归档约定
+│   │   └── mvp_v0.2/
+│   │       ├── README.md          # MVP v0.2 任务索引
+│   │       ├── 01_domain_contracts.md … 11_knowledge_engine_gate_b.md
+│   │       └── AGENT_DISPATCH_PROMPTS.md
 │   └── handoffs/                  # 各 Step 交接记录（统一格式）
 │       ├── step_00_architecture_handoff.md
 │       └── step_01_handoff.md … step_09_handoff.md   # 由各实现 Agent 填写
@@ -139,7 +142,7 @@ image_system/
 ```
 
 规则：
-- 根目录任务书 md 一律不移动、不修改、不改名。
+- 已归档版本的任务书一律不覆盖；新版本在 `docs/task_books/` 下建立独立目录。
 - `visual_intent_agent` 是扁平布局的非安装型包，测试经 pytest `pythonpath=["."]` 导入；
   不引入 build backend、不做 `pip install -e`。
 - 跨包导入一律用完整路径（如 `from visual_intent_agent.domain.intent import VisualIntent`）。
@@ -688,7 +691,8 @@ adapter、配置项各自独立；禁止互相 import 实现细节（可共享 `
 
 顺序冻结：`01 → 02 → 03 → (04 ∥ 05) → 06 → 07 → 08 → 09`。
 
-- 每步完成后由实现 Agent 写 `docs/handoffs/step_XX_handoff.md`，格式按 README
+- 每步完成后由实现 Agent 写 `docs/handoffs/step_XX_handoff.md`，格式按
+  `docs/task_books/mvp_v0.2/README.md`
   "统一交接格式"（任务/完成内容/变更文件/公开接口/测试命令与结果/已知限制/
   对下一步的输入/是否满足验收条件），"公开接口"一节必须列出本步新增的
   Issue code 与任何对本文的最小修订提议。

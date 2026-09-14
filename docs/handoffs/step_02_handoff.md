@@ -100,7 +100,7 @@
 - `tests/validation/test_validation_public_api.py`
 - `docs/handoffs/step_02_handoff.md`（本文件）
 
-未触碰：`01_domain_contracts.md`～`11_*.md`、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、`docs/ARCHITECTURE.md`、`visual_intent_agent/domain/**`、`visual_intent_agent/config.py`、`tests/conftest.py`、`tests/test_sanity.py`、`tests/domain/**`、`tests/fixtures/**`、`pyproject.toml`、`uv.lock`、`.env`。**无新增依赖**（仍只有 pydantic / httpx / pytest；validation 只 import pydantic 与 domain）。
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、`docs/ARCHITECTURE.md`、`visual_intent_agent/domain/**`、`visual_intent_agent/config.py`、`tests/conftest.py`、`tests/test_sanity.py`、`tests/domain/**`、`tests/fixtures/**`、`pyproject.toml`、`uv.lock`、`.env`。**无新增依赖**（仍只有 pydantic / httpx / pytest；validation 只 import pydantic 与 domain）。
 
 ## 公开接口
 

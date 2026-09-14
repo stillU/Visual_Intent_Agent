@@ -4,7 +4,7 @@
 连续 3～5 轮局部修改闭环。**不实现图片编辑 / 身份锁定 / Reference Image / KnowledgeEngine；
 不声称图片视觉不变；不跳过重新确认。**
 
-- 依据：`09_feedback_realization.md`（任务书）、`README.md`（10 条全局不变量与统一交接格式）、
+- 依据：`docs/task_books/mvp_v0.2/09_feedback_realization.md`（任务书）、`docs/task_books/mvp_v0.2/README.md`（10 条全局不变量与统一交接格式）、
   `docs/ARCHITECTURE.md` Rev.2（第 4 节「Step 09 — feedback + realization/carry + workflow/review」
   冻结表、5.1～5.7、第 7 节测试策略、文末 Rev.2）、
   `docs/handoffs/{step_01…step_08}_handoff.md`、`step_04_patch_001.md`、
@@ -15,7 +15,7 @@
   **未修改任何上游或既有文件**（`domain/`、`validation/`、`policy/`、`persistence/`、
   `intent_engine/`、`pipeline/`、`providers/`、`prompt_engine/`、`realization/models.py`、
   `workflow/{__init__,questions,confirmation,service}.py`、`config.py`、`pyproject.toml`、
-  `uv.lock`、`.env`、根目录任务书、`README.md`、`docs/ARCHITECTURE.md`、既有 handoff 与既有测试）。
+  `uv.lock`、`.env`、MVP v0.2 任务书与任务索引、`docs/ARCHITECTURE.md`、既有 handoff 与既有测试）。
   唯一写入的既有文件是本步拥有的 `visual_intent_agent/feedback/__init__.py`（原 0 字节空文件 →
   按冻结表再导出公开面）；`realization/__init__.py` **保持 0 字节空白**（有既有测试钉住）。
   **无新增依赖**（只用 pydantic + stdlib；默认测试全离线）。
@@ -183,7 +183,7 @@ Step 07/08 持有）。`os` / `httpx` / `sqlite3` 同样不 import（持久化�
 
 - `visual_intent_agent/feedback/__init__.py`（原 0 字节空文件 → 按冻结表再导出公开面）
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、
 `docs/ARCHITECTURE.md`、其余全部 handoff、`visual_intent_agent/{domain,validation,policy,
 persistence,intent_engine,providers,prompt_engine,generation,config.py}`、
 `visual_intent_agent/realization/{__init__.py,models.py}`、

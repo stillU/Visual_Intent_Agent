@@ -5,14 +5,14 @@ Realization 编译目标模型 Prompt，保存可完整追溯的 PromptArtifact�
 unauthorized addition 检查、确定性 delegated 局部实现与稳定复用、唯一目标模型 Renderer；
 **不调用图像 Provider、不接 RAG、不引入 Prompt AST、不实现 Step 09 的 carry/失效逻辑**）
 
-- 依据：`07_prompt_engine.md`（任务书）、`README.md`（10 条全局不变量与统一交接格式）、
+- 依据：`docs/task_books/mvp_v0.2/07_prompt_engine.md`（任务书）、`docs/task_books/mvp_v0.2/README.md`（10 条全局不变量与统一交接格式）、
   `docs/ARCHITECTURE.md` 第 4 节「Step 07 — prompt_engine + realization/models」冻结表 /
   5.1 ID 前缀 / 5.3 schema_version / 5.5 code 命名空间 / 5.7 不可变模型 / 第 7 节测试策略（Rev.1）、
   `docs/handoffs/step_01/04/06_handoff.md`、`step_04_patch_001.md`、`architecture_decision_001.md`。
 - 范围纪律：只新增 `visual_intent_agent/realization/models.py`、`visual_intent_agent/prompt_engine/**`、
   `tests/prompt_engine/**`、`tests/realization/**` 与本文件；**未修改任何上游或既有文件**
   （`domain/`、`validation/`、`policy/`、`persistence/`、`intent_engine/`、`providers/`、`workflow/`、
-  `config.py`、`pyproject.toml`、`uv.lock`、`.env`、根目录任务书、`README.md`、`docs/ARCHITECTURE.md`）；
+  `config.py`、`pyproject.toml`、`uv.lock`、`.env`、MVP v0.2 任务书与任务索引、`docs/ARCHITECTURE.md`）；
   `realization/__init__.py` 按架构冻结**保持空白**（见「已知限制 1」）；**无新增依赖**
   （只用 pydantic + stdlib 的 `hashlib` / `dataclasses` / `typing`）。
 
@@ -145,7 +145,7 @@ JSON `+00:00`）。核心合同无 `dict[str, Any]`。
 - `tests/realization/test_realization_models.py`
 - `docs/handoffs/step_07_handoff.md`（本文件）
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、
 `docs/ARCHITECTURE.md`、`visual_intent_agent/{domain,validation,policy,persistence,intent_engine,providers,workflow,config.py}`、
 `visual_intent_agent/realization/__init__.py`（保持 0 字节）、`tests/{domain,validation,policy,persistence,
 providers,intent_engine,workflow,e2e,smoke,fixtures}`、`tests/conftest.py`、`tests/test_sanity.py`、

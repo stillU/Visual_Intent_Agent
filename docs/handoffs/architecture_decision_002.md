@@ -213,7 +213,7 @@ model_version；该 Provider（ARCHITECTURE 6.2 已探测事实）响应不携�
 ### 禁止
 
 改 `schema.sql` / `state_machine.py` / `records.py` / 其他任何产品模块；改任务书
-md / `README.md` / `api.md` / 既有 handoff / `ARCHITECTURE.md`（架构方已改）/
+md / MVP v0.2 任务索引 / `api.md` / 既有 handoff / `ARCHITECTURE.md`（架构方已改）/
 `pyproject.toml` / `uv.lock` / `.env`；新增依赖、新增表/字段、新增 Issue code、
 新增状态迁移；让 retry 以任何形式重新 compile。
 

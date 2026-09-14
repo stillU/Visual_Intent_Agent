@@ -33,7 +33,7 @@
 - `tests/fixtures/schema_v1/`：`empty_intent.json`、`complete_intent.json`、`partial_intent_with_delegation.json`、`delta_set.json`、`delta_set_resolution_only.json`、`delta_clear.json`、`delta_pin.json`、`delta_unpin.json`、`intent_revision_genesis.json`、`intent_revision.json`、`execution_revision.json`、`issue.json`
 - `docs/handoffs/step_01_handoff.md`（本文件）
 
-未触碰：`01_domain_contracts.md`～`11_*.md`、`README.md`、`api.md`、`docs/ARCHITECTURE.md`、`visual_intent_agent/config.py`、`tests/conftest.py`、`tests/test_sanity.py`、`pyproject.toml`、`uv.lock`、`.env`。**无新增依赖**（仍只有 pydantic / httpx / pytest）。
+未触碰：MVP v0.2 任务书与任务索引、`api.md`、`docs/ARCHITECTURE.md`、`visual_intent_agent/config.py`、`tests/conftest.py`、`tests/test_sanity.py`、`pyproject.toml`、`uv.lock`、`.env`。**无新增依赖**（仍只有 pydantic / httpx / pytest）。
 
 ## 公开接口
 

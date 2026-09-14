@@ -118,7 +118,7 @@ PromptArtifact，两条路径都校验该 PromptArtifact 的确认仍有效，**
 未触碰：`visual_intent_agent/persistence/schema.sql`、`state_machine.py`、`records.py`、
 `__init__.py`、`visual_intent_agent/generation/models.py`、`__init__.py`、
 `visual_intent_agent/providers/**`、其他一切产品模块、其他测试目录、`tests/conftest.py`、
-`pyproject.toml`、`uv.lock`、`.env`、`README.md`、`api.md`、`docs/ARCHITECTURE.md`、
+`pyproject.toml`、`uv.lock`、`.env`、MVP v0.2 任务索引、`api.md`、`docs/ARCHITECTURE.md`、
 `docs/handoffs/step_08_handoff.md` 及其他既有 md。
 
 ## 公开接口

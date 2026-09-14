@@ -133,7 +133,7 @@ INSERT 整份 `model_dump_json()`，最后在同一事务内推进 `sessions` �
 - `tests/persistence/test_persistence_{state_machine,records,schema,revisions,confirmation,transactions,artifacts,idempotency,public_api,scenarios}.py`
 - `docs/handoffs/step_04_handoff.md`（本文件）
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、`docs/ARCHITECTURE.md`、
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、`docs/ARCHITECTURE.md`、
 `visual_intent_agent/domain/**`、`validation/**`、`policy/**`、`providers/**`、`intent_engine/**`、
 `config.py`、`tests/conftest.py`、`tests/test_sanity.py`、`tests/domain/**`、`tests/validation/**`、
 `tests/policy/**`、`tests/providers/**`、`tests/intent_engine/**`、`tests/fixtures/**`、

@@ -24,14 +24,14 @@ Step 04 handoff「最小修订提案 3」：Step 06 冻结流程要求"用户消
 
 ### 理由（原文依据）
 
-1. **任务书 04 的迁移表是下限而非上限**：`04_repository_state_machine.md`「必须支持的
+1. **任务书 04 的迁移表是下限而非上限**：`docs/task_books/mvp_v0.2/04_repository_state_machine.md`「必须支持的
    状态迁移」原文为"**至少覆盖**："。增补第 11 条不违反任务书范围约束；"恰好 10 条"是
    架构自身的收紧，经最小修订流程放宽一条属正当程序。
 2. **原始设计书明确列出该迁移**：`visual_intent_agent_mvp_design_v0.1.md` 第 15 节
    状态机表含行 `| WAITING_CONFIRMATION | 修改内容 | UNDERSTANDING |`；其端点状态约束
    并写明"**messages 在用户等待态可用**"——`WAITING_CONFIRMATION` 是用户等待态，
    选项 (b) 的"拒绝新消息"直接违背设计书。
-3. **Step 06 任务书的流程与必测场景依赖该迁移**：`06_clarification_confirmation_workflow.md`
+3. **Step 06 任务书的流程与必测场景依赖该迁移**：`docs/task_books/mvp_v0.2/06_clarification_confirmation_workflow.md`
    「用户消息」第 2 步"状态进入 `UNDERSTANDING`"是每轮无条件动作；必测场景"修改 Intent
    后旧确认失效""修改 output ratio 后旧确认失效"在 P1 流程中必经"确认后
    （`WAITING_CONFIRMATION`）再发修改消息 → 回到 `UNDERSTANDING` → 新 revision →
@@ -98,7 +98,7 @@ ConfirmationRecord`：任务书必测场景"旧确认记录仍可审计"需要�
    「给下一步的输入」原文列"Step 07 需要获得：……**ExecutionRevision**……"。冻结方法表
    只有 `get_intent_revision`，缺它 Step 07 只能绕过 Repository 协议直读 SQLite，破坏
    "Repository 是业务层唯一依赖面"的架构边界。
-2. **`get_confirmation` 是任务书必测场景的直接前提**：`04_repository_state_machine.md`
+2. **`get_confirmation` 是任务书必测场景的直接前提**：`docs/task_books/mvp_v0.2/04_repository_state_machine.md`
    必测场景原文"**旧确认记录仍可审计**"；设计书运行保护要求"过期确认……不自动套用"，
    审计读回是前提。`is_confirmation_valid` 返回 bool 无法承载审计。
 3. **任务书授权范围**：任务书 04 的 Repository 接口原文为"**至少提供**："9 个方法——

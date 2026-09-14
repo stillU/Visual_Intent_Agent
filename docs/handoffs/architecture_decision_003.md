@@ -231,7 +231,7 @@ test_workflow_never_imports_later_steps_or_web_db_layers` 的扫描范围维持
 ### 禁止
 
 改 Step 09 既有文件（`feedback/**`、`realization/carry.py`、`workflow/review.py`）
-与任何其他产品模块；改任务书 md / `README.md` / `api.md` / 既有 handoff /
+与任何其他产品模块；改 MVP v0.2 任务书或任务索引 / `api.md` / 既有 handoff /
 `ARCHITECTURE.md`（架构方已改）/ `pyproject.toml` / `uv.lock` / `.env`；改
 fixture；新增模块 / 状态 / 依赖 / Issue code / 状态迁移；给 `SubmitMessageOutcome`
 加字段；让 `submit_message` 调用 Provider / PromptEngine / GenerationPipeline。

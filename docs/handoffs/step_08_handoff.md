@@ -4,7 +4,7 @@
 追踪的 GenerationArtifact，并正确处理 `WAITING_REVIEW` / `FAILED` / retry。**不修改 Intent 或
 Prompt，不实现多模型与 Reference Image。**
 
-- 依据：`08_generation_pipeline.md`（任务书）、`README.md`（10 条全局不变量与统一交接格式）、
+- 依据：`docs/task_books/mvp_v0.2/08_generation_pipeline.md`（任务书）、`docs/task_books/mvp_v0.2/README.md`（10 条全局不变量与统一交接格式）、
   `docs/ARCHITECTURE.md` 第 4 节「Step 08 — providers(image) + generation」冻结表 / 第 5.6 节
   错误处理 / 第 6 节 Provider 事实与错误六分类 / 第 7 节测试策略（Rev.1）、
   `docs/handoffs/step_04_handoff.md`、`step_04_patch_001.md`、`step_05_handoff.md`、
@@ -14,7 +14,7 @@ Prompt，不实现多模型与 Reference Image。**
   `tests/generation/**`、`tests/smoke/test_image_smoke.py` 与本文件；**未修改任何上游或既有文件**
   （`domain/`、`validation/`、`policy/`、`persistence/`、`intent_engine/`、`providers/` 的 LLM 侧、
   `workflow/`、`prompt_engine/`、`realization/`、`config.py`、`pyproject.toml`、`uv.lock`、`.env`、
-  根目录任务书、`README.md`、`docs/ARCHITECTURE.md`）。
+  MVP v0.2 任务书与任务索引、`docs/ARCHITECTURE.md`）。
   `providers/__init__.py` 保持 **0 字节**；`generation/` 是**单 Step 拥有**的包，故
   `generation/__init__.py`（原 0 字节）按冻结表再导出公开面。**无新增依赖**（httpx 已在 Step 05
   引入；图像侧只用 pydantic + httpx + stdlib）。
@@ -173,7 +173,7 @@ Reference Image、无队列；output 只是本地下载件，不是 RealizationS
 
 - `visual_intent_agent/generation/__init__.py`（原 0 字节空文件 → 再导出本步公开面）
 
-未触碰：根目录任务书 md、`README.md`、`AGENT_DISPATCH_PROMPTS.md`、`api.md`、
+未触碰：MVP v0.2 任务书、任务索引与 Agent 派发提示词、`api.md`、
 `docs/ARCHITECTURE.md`、其余所有 handoff、`visual_intent_agent/{domain,validation,policy,
 persistence,intent_engine,workflow,prompt_engine,realization,config.py}`、
 `visual_intent_agent/providers/{__init__.py,errors.py,llm.py,openai_llm.py,fake_llm.py}`、
