@@ -1,0 +1,13 @@
+{
+  "operation": "SET",
+  "path": "environment.location",
+  "value": null,
+  "resolution": "user_delegated",
+  "evidence_refs": [
+    {
+      "message_id": "msg_20000000000000000000000000000002",
+      "fragment": "you pick the location",
+      "pending_question_id": "qst_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  ]
+}

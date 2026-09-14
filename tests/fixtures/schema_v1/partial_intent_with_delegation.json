@@ -1,0 +1,58 @@
+{
+  "schema_version": "v1",
+  "subject": {
+    "description": "a lighthouse on a rocky cliff"
+  },
+  "style": {
+    "primary": "minimalist flat vector poster"
+  },
+  "resolutions": {
+    "subject.description": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_10000000000000000000000000000001",
+          "fragment": "a lighthouse on a rocky cliff",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "environment.location": {
+      "resolution": "user_delegated",
+      "evidence_refs": [
+        {
+          "message_id": "msg_10000000000000000000000000000002",
+          "fragment": "pick a location for me",
+          "pending_question_id": "qst_cccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "reason": "user answered the pending question with an explicit delegation"
+    },
+    "lighting.character": {
+      "resolution": "not_applicable",
+      "evidence_refs": [
+        {
+          "message_id": "msg_10000000000000000000000000000003",
+          "fragment": "lighting does not matter for this poster",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "style.primary": {
+      "resolution": "user_confirmed_proposal",
+      "evidence_refs": [
+        {
+          "message_id": "msg_10000000000000000000000000000004",
+          "fragment": "the flat vector poster idea works",
+          "pending_question_id": "qst_dddddddddddddddddddddddddddddddd"
+        }
+      ],
+      "reason": null
+    }
+  },
+  "pinned_paths": [
+    "subject.description"
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "schema_version": "v1",
+  "subject": {
+    "description": "a red fox sitting on a mossy rock",
+    "count": 1,
+    "pose_action": "sitting, head turned toward the camera"
+  },
+  "composition": {
+    "framing": "medium shot, subject centered"
+  },
+  "environment": {
+    "mode": "outdoor forest at dawn",
+    "location": "temperate woodland clearing"
+  },
+  "style": {
+    "primary": "watercolor illustration",
+    "description": "soft edges with visible paper texture"
+  },
+  "lighting": {
+    "character": "soft diffused morning light from the upper left"
+  },
+  "camera": {
+    "angle": "eye level",
+    "depth_of_field": "shallow, background softly blurred"
+  },
+  "color": {
+    "palette": "muted earth tones with a warm amber accent"
+  },
+  "resolutions": {
+    "subject.description": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_11111111111111111111111111111111",
+          "fragment": "a red fox sitting on a mossy rock",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "subject.count": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_11111111111111111111111111111111",
+          "fragment": "one fox",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "subject.pose_action": {
+      "resolution": "user_confirmed_proposal",
+      "evidence_refs": [
+        {
+          "message_id": "msg_22222222222222222222222222222222",
+          "fragment": "yes, sitting and looking at the camera is good",
+          "pending_question_id": "qst_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "reason": "user accepted the proposed pose after clarification"
+    },
+    "composition.framing": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_33333333333333333333333333333333",
+          "fragment": "medium shot",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "environment.mode": {
+      "resolution": "user_delegated",
+      "evidence_refs": [
+        {
+          "message_id": "msg_44444444444444444444444444444444",
+          "fragment": "you choose the setting",
+          "pending_question_id": null
+        }
+      ],
+      "reason": "explicit delegation of the environment to the system"
+    },
+    "environment.location": {
+      "resolution": "user_delegated",
+      "evidence_refs": [
+        {
+          "message_id": "msg_44444444444444444444444444444444",
+          "fragment": "you choose the setting",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "style.primary": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_55555555555555555555555555555555",
+          "fragment": "watercolor illustration",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "style.description": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_55555555555555555555555555555555",
+          "fragment": "soft edges, paper texture",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "lighting.character": {
+      "resolution": "not_applicable",
+      "evidence_refs": [
+        {
+          "message_id": "msg_66666666666666666666666666666666",
+          "fragment": "flat even lighting, nothing dramatic",
+          "pending_question_id": "qst_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      ],
+      "reason": "user explicitly stated lighting should not be a distinguishing factor"
+    },
+    "camera.angle": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_33333333333333333333333333333333",
+          "fragment": "eye level",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "camera.depth_of_field": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_33333333333333333333333333333333",
+          "fragment": "blurred background",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    },
+    "color.palette": {
+      "resolution": "user_specified",
+      "evidence_refs": [
+        {
+          "message_id": "msg_77777777777777777777777777777777",
+          "fragment": "muted earth tones with one warm accent",
+          "pending_question_id": null
+        }
+      ],
+      "reason": null
+    }
+  },
+  "pinned_paths": [
+    "color.palette",
+    "style.primary"
+  ]
+}

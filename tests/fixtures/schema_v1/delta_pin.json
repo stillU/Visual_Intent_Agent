@@ -1,0 +1,13 @@
+{
+  "operation": "PIN",
+  "path": "color.palette",
+  "value": null,
+  "resolution": null,
+  "evidence_refs": [
+    {
+      "message_id": "msg_20000000000000000000000000000004",
+      "fragment": "keep the palette exactly as it is",
+      "pending_question_id": null
+    }
+  ]
+}

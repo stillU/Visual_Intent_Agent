@@ -1,0 +1,6 @@
+{
+  "code": "validation.unknown_path",
+  "message": "delta path is not part of the frozen intent whitelist",
+  "path": "subject.mood",
+  "severity": "warning"
+}

@@ -1,0 +1,13 @@
+{
+  "operation": "CLEAR",
+  "path": "style.description",
+  "value": null,
+  "resolution": null,
+  "evidence_refs": [
+    {
+      "message_id": "msg_20000000000000000000000000000003",
+      "fragment": "forget the paper texture note",
+      "pending_question_id": null
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "operation": "UNPIN",
+  "path": "color.palette",
+  "value": null,
+  "resolution": null,
+  "evidence_refs": [
+    {
+      "message_id": "msg_20000000000000000000000000000005",
+      "fragment": "the palette does not need to be locked anymore",
+      "pending_question_id": null
+    }
+  ]
+}

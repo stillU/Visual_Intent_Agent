@@ -1,0 +1,138 @@
+{
+  "case_id": "subject_only_core_missing",
+  "description": "只有 subject：core 的 style / environment 仍缺失（不可 Ready），且 subject 一出现 framing / pose_action 转为 required。",
+  "intent": {
+    "schema_version": "v1",
+    "intent_id": null,
+    "subject": {
+      "description": "a lone astronaut",
+      "count": null,
+      "pose_action": null
+    },
+    "composition": {
+      "framing": null
+    },
+    "environment": {
+      "mode": null,
+      "location": null
+    },
+    "style": {
+      "primary": null,
+      "description": null
+    },
+    "lighting": {
+      "character": null
+    },
+    "camera": {
+      "angle": null,
+      "depth_of_field": null
+    },
+    "color": {
+      "palette": null
+    },
+    "resolutions": {},
+    "pinned_paths": []
+  },
+  "execution_context": null,
+  "expected": {
+    "intent": {
+      "schema_version": "v1",
+      "intent_id": null,
+      "subject": {
+        "description": "a lone astronaut",
+        "count": null,
+        "pose_action": null
+      },
+      "composition": {
+        "framing": null
+      },
+      "environment": {
+        "mode": null,
+        "location": null
+      },
+      "style": {
+        "primary": null,
+        "description": null
+      },
+      "lighting": {
+        "character": null
+      },
+      "camera": {
+        "angle": null,
+        "depth_of_field": null
+      },
+      "color": {
+        "palette": null
+      },
+      "resolutions": {},
+      "pinned_paths": []
+    },
+    "applied_deltas": [],
+    "issues": [],
+    "unresolved_decisions": [
+      {
+        "path": "style.primary",
+        "materiality": "core",
+        "action": "block",
+        "reason": "blocking decision 'style.primary' (core) is unresolved: 'style.primary' has no value and no resolution record; rule required_if='always'"
+      },
+      {
+        "path": "environment.mode",
+        "materiality": "core",
+        "action": "block",
+        "reason": "blocking decision 'environment.mode' (core) is unresolved: 'environment.mode' has no value and no resolution record; rule required_if='always'"
+      },
+      {
+        "path": "composition.framing",
+        "materiality": "perceptual",
+        "action": "block",
+        "reason": "blocking decision 'composition.framing' (perceptual) is unresolved: 'composition.framing' has no value and no resolution record; rule required_if='when_subject_specified'"
+      },
+      {
+        "path": "subject.pose_action",
+        "materiality": "perceptual",
+        "action": "block",
+        "reason": "blocking decision 'subject.pose_action' (perceptual) is unresolved: 'subject.pose_action' has no value and no resolution record; rule required_if='when_subject_specified'"
+      },
+      {
+        "path": "lighting.character",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'lighting.character' (perceptual) is unresolved: 'lighting.character' has no value and no resolution record; rule required_if='when_environment_specified'"
+      },
+      {
+        "path": "camera.angle",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'camera.angle' (perceptual) is unresolved: 'camera.angle' has no value and no resolution record; rule required_if='when_camera_specified'"
+      },
+      {
+        "path": "color.palette",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'color.palette' (perceptual) is unresolved: 'color.palette' has no value and no resolution record; rule required_if='never'"
+      },
+      {
+        "path": "camera.depth_of_field",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'camera.depth_of_field' (perceptual) is unresolved: 'camera.depth_of_field' has no value and no resolution record; rule required_if='when_camera_specified'"
+      }
+    ],
+    "conflicts": [],
+    "question": {
+      "target_path": "style.primary",
+      "reason": "blocking decision 'style.primary' (core) is unresolved: 'style.primary' has no value and no resolution record; rule required_if='always'",
+      "allow_delegate": true,
+      "allow_custom": true,
+      "suggested_values": [
+        "photorealistic",
+        "cinematic",
+        "illustration"
+      ],
+      "question_text": null,
+      "question_id": null
+    },
+    "ready_for_confirmation": false
+  }
+}

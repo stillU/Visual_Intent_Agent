@@ -1,0 +1,130 @@
+{
+  "fixture_version": "v1",
+  "name": "p3_multiturn_camera_lighting_environment",
+  "description": "Step 09 P3 多轮剧本：基础意图（2 个 delegated 路径）→ 生成 #1 → 4 轮局部修改 + 1 轮 accept。每轮反馈都由 FeedbackEngine 解释、经 Validator/Reducer/Policy、重新确认后才再生成。",
+  "intent": {
+    "values": {
+      "subject.description": "a cat",
+      "style.primary": "photorealistic",
+      "environment.mode": "studio",
+      "composition.framing": "medium_shot",
+      "subject.pose_action": "sitting"
+    },
+    "delegated": ["lighting.character", "environment.location"],
+    "pinned": []
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "kind": "feedback",
+      "text": "keep the person exactly the same, just pull the camera back",
+      "feedback_response": {
+        "decision": "revise",
+        "candidate_deltas": [
+          {
+            "operation": "SET",
+            "path": "composition.framing",
+            "value": "wide_shot",
+            "evidence_fragment": "pull the camera back"
+          }
+        ],
+        "preserve_paths": ["subject.*"],
+        "compile_feedback": "keep the subject intact; only change the framing to wide_shot"
+      },
+      "expect": {
+        "decision": "revise",
+        "changed_paths": ["composition.framing"],
+        "preserve_paths": ["subject.*"],
+        "pinned_paths": ["subject.description", "subject.pose_action"],
+        "carried_realizations": ["environment.location", "lighting.character"],
+        "invalidated_realizations": []
+      }
+    },
+    {
+      "round": 2,
+      "kind": "feedback",
+      "text": "now only change the lighting, make it dramatic",
+      "feedback_response": {
+        "decision": "revise",
+        "candidate_deltas": [
+          {
+            "operation": "SET",
+            "path": "lighting.character",
+            "value": "dramatic",
+            "evidence_fragment": "make it dramatic"
+          }
+        ],
+        "preserve_paths": []
+      },
+      "expect": {
+        "decision": "revise",
+        "changed_paths": ["lighting.character"],
+        "preserve_paths": [],
+        "pinned_paths": [],
+        "carried_realizations": ["environment.location"],
+        "invalidated_realizations": ["lighting.character"]
+      }
+    },
+    {
+      "round": 3,
+      "kind": "feedback",
+      "text": "the background is not good",
+      "feedback_response": {
+        "decision": "clarify",
+        "clarify_path": "environment.mode",
+        "clarify_reason": "the user is unhappy with the background but did not say what it should be instead"
+      },
+      "expect": {
+        "decision": "clarify",
+        "clarify_path": "environment.mode",
+        "intent_unchanged": true
+      },
+      "answer": {
+        "text": "make it an indoor scene",
+        "interpreter_response": {
+          "candidate_deltas": [
+            {
+              "operation": "SET",
+              "path": "environment.mode",
+              "value": "indoor",
+              "answers_pending_question": true,
+              "evidence_fragment": "indoor"
+            }
+          ],
+          "detected_conflicts": [],
+          "unresolved_language": []
+        }
+      }
+    },
+    {
+      "round": 4,
+      "kind": "feedback",
+      "text": "actually make the whole environment outdoor instead",
+      "feedback_response": {
+        "decision": "revise",
+        "candidate_deltas": [
+          {
+            "operation": "SET",
+            "path": "environment.mode",
+            "value": "outdoor",
+            "evidence_fragment": "outdoor"
+          }
+        ],
+        "preserve_paths": []
+      },
+      "expect": {
+        "decision": "revise",
+        "changed_paths": ["environment.mode"],
+        "carried_realizations": [],
+        "invalidated_realizations": ["environment.location"]
+      }
+    },
+    {
+      "round": 5,
+      "kind": "feedback",
+      "text": "this is exactly what I wanted, we are done",
+      "feedback_response": {"decision": "accept"},
+      "expect": {"decision": "accept", "state": "COMPLETED"}
+    }
+  ]
+}

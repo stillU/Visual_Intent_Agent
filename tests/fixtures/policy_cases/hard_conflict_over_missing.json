@@ -1,0 +1,135 @@
+{
+  "case_id": "hard_conflict_over_missing",
+  "description": "存在 Hard Conflict（environment.mode=studio 与 environment.location=outdoor）时优先于任何 Missing Decision。",
+  "intent": {
+    "schema_version": "v1",
+    "intent_id": null,
+    "subject": {
+      "description": "a lone astronaut",
+      "count": null,
+      "pose_action": null
+    },
+    "composition": {
+      "framing": null
+    },
+    "environment": {
+      "mode": "studio",
+      "location": "outdoor street at night"
+    },
+    "style": {
+      "primary": null,
+      "description": null
+    },
+    "lighting": {
+      "character": null
+    },
+    "camera": {
+      "angle": null,
+      "depth_of_field": null
+    },
+    "color": {
+      "palette": null
+    },
+    "resolutions": {},
+    "pinned_paths": []
+  },
+  "execution_context": null,
+  "expected": {
+    "intent": {
+      "schema_version": "v1",
+      "intent_id": null,
+      "subject": {
+        "description": "a lone astronaut",
+        "count": null,
+        "pose_action": null
+      },
+      "composition": {
+        "framing": null
+      },
+      "environment": {
+        "mode": "studio",
+        "location": "outdoor street at night"
+      },
+      "style": {
+        "primary": null,
+        "description": null
+      },
+      "lighting": {
+        "character": null
+      },
+      "camera": {
+        "angle": null,
+        "depth_of_field": null
+      },
+      "color": {
+        "palette": null
+      },
+      "resolutions": {},
+      "pinned_paths": []
+    },
+    "applied_deltas": [],
+    "issues": [],
+    "unresolved_decisions": [
+      {
+        "path": "style.primary",
+        "materiality": "core",
+        "action": "block",
+        "reason": "blocking decision 'style.primary' (core) is unresolved: 'style.primary' has no value and no resolution record; rule required_if='always'"
+      },
+      {
+        "path": "composition.framing",
+        "materiality": "perceptual",
+        "action": "block",
+        "reason": "blocking decision 'composition.framing' (perceptual) is unresolved: 'composition.framing' has no value and no resolution record; rule required_if='when_subject_specified'"
+      },
+      {
+        "path": "subject.pose_action",
+        "materiality": "perceptual",
+        "action": "block",
+        "reason": "blocking decision 'subject.pose_action' (perceptual) is unresolved: 'subject.pose_action' has no value and no resolution record; rule required_if='when_subject_specified'"
+      },
+      {
+        "path": "lighting.character",
+        "materiality": "perceptual",
+        "action": "block",
+        "reason": "blocking decision 'lighting.character' (perceptual) is unresolved: 'lighting.character' has no value and no resolution record; rule required_if='when_environment_specified'"
+      },
+      {
+        "path": "camera.angle",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'camera.angle' (perceptual) is unresolved: 'camera.angle' has no value and no resolution record; rule required_if='when_camera_specified'"
+      },
+      {
+        "path": "color.palette",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'color.palette' (perceptual) is unresolved: 'color.palette' has no value and no resolution record; rule required_if='never'"
+      },
+      {
+        "path": "camera.depth_of_field",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'camera.depth_of_field' (perceptual) is unresolved: 'camera.depth_of_field' has no value and no resolution record; rule required_if='when_camera_specified'"
+      }
+    ],
+    "conflicts": [
+      {
+        "code": "policy.hard_conflict.environment_mode_location",
+        "message": "environment.mode declares an enclosed/indoor setting while environment.location names an open-air place",
+        "path": "environment.mode",
+        "severity": "error"
+      }
+    ],
+    "question": {
+      "target_path": "environment.mode",
+      "reason": "environment.mode declares an enclosed/indoor setting while environment.location names an open-air place",
+      "allow_delegate": true,
+      "allow_custom": true,
+      "suggested_values": [],
+      "question_text": null,
+      "question_id": null
+    },
+    "ready_for_confirmation": false
+  }
+}

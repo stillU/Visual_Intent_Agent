@@ -1,0 +1,11 @@
+{
+  "schema_version": "v1",
+  "intent_revision_id": "irev_30000000000000000000000000000001",
+  "session_id": "ses_30000000000000000000000000000001",
+  "parent_revision_id": null,
+  "intent": {
+    "schema_version": "v1"
+  },
+  "applied_deltas": [],
+  "created_at": "2026-01-15T08:30:00+00:00"
+}

@@ -1,0 +1,140 @@
+{
+  "fixture_version": "v1",
+  "name": "p3_carry_cases",
+  "description": "Step 09 evaluate_carry 表驱动案例：默认继承 active；SET/CLEAR 同路径、Decision dependency、UNPIN 失效；PIN 不失效；已失效值不再进入新快照。",
+  "policies": "DECISION_POLICIES (policy.v1)",
+  "cases": [
+    {
+      "name": "unrelated_change_keeps_all_active_values",
+      "values": [
+        {"path": "environment.location", "value": "a minimalist studio backdrop"},
+        {"path": "lighting.character", "value": "soft"}
+      ],
+      "change_summary": {
+        "changed_paths": ["composition.framing"],
+        "pinned_paths": [],
+        "unpinned_paths": [],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": ["environment.location", "lighting.character"],
+      "expect_invalidated": []
+    },
+    {
+      "name": "same_path_set_invalidates_that_value",
+      "values": [
+        {"path": "environment.location", "value": "a minimalist studio backdrop"},
+        {"path": "lighting.character", "value": "soft"}
+      ],
+      "change_summary": {
+        "changed_paths": ["lighting.character"],
+        "pinned_paths": [],
+        "unpinned_paths": [],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": ["environment.location"],
+      "expect_invalidated": [
+        {"path": "lighting.character", "reason": "user_changed_delegated_path"}
+      ]
+    },
+    {
+      "name": "clear_of_the_delegated_path_invalidates",
+      "values": [
+        {"path": "lighting.character", "value": "soft"}
+      ],
+      "change_summary": {
+        "changed_paths": [],
+        "pinned_paths": [],
+        "unpinned_paths": [],
+        "cleared_paths": ["lighting.character"],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": [],
+      "expect_invalidated": [
+        {"path": "lighting.character", "reason": "user_changed_delegated_path"}
+      ]
+    },
+    {
+      "name": "decision_dependency_change_invalidates_environment_location",
+      "values": [
+        {"path": "environment.location", "value": "a minimalist studio backdrop"},
+        {"path": "lighting.character", "value": "soft"}
+      ],
+      "change_summary": {
+        "changed_paths": ["environment.mode"],
+        "pinned_paths": [],
+        "unpinned_paths": [],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": ["lighting.character"],
+      "expect_invalidated": [
+        {"path": "environment.location", "reason": "decision_dependency_changed"}
+      ]
+    },
+    {
+      "name": "unpin_of_the_delegated_path_invalidates",
+      "values": [
+        {"path": "lighting.character", "value": "soft"}
+      ],
+      "change_summary": {
+        "changed_paths": [],
+        "pinned_paths": [],
+        "unpinned_paths": ["lighting.character"],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": [],
+      "expect_invalidated": [
+        {"path": "lighting.character", "reason": "unpinned_delegated_path"}
+      ]
+    },
+    {
+      "name": "pin_reinforces_preservation_and_never_invalidates",
+      "values": [
+        {"path": "lighting.character", "value": "soft"},
+        {"path": "environment.location", "value": "a cozy interior"}
+      ],
+      "change_summary": {
+        "changed_paths": [],
+        "pinned_paths": ["environment.mode"],
+        "unpinned_paths": [],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": ["lighting.character", "environment.location"],
+      "expect_invalidated": []
+    },
+    {
+      "name": "already_invalidated_values_are_not_recarried",
+      "values": [
+        {"path": "lighting.character", "value": "soft", "status": "invalidated"},
+        {"path": "environment.location", "value": "a cozy interior"}
+      ],
+      "change_summary": {
+        "changed_paths": ["composition.framing"],
+        "pinned_paths": [],
+        "unpinned_paths": [],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": ["environment.location"],
+      "expect_invalidated": []
+    },
+    {
+      "name": "no_state_yields_an_empty_evaluation",
+      "values": [],
+      "state_absent": true,
+      "change_summary": {
+        "changed_paths": ["composition.framing"],
+        "pinned_paths": [],
+        "unpinned_paths": [],
+        "cleared_paths": [],
+        "confirmation_invalidated": true
+      },
+      "expect_carried": [],
+      "expect_invalidated": []
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "case_id": "ready_for_confirmation",
+  "description": "所有 block 项已解决且无 Hard Conflict：ready=True 且 question=None；camera / color 仍为 omit 且保持 unspecified。",
+  "intent": {
+    "schema_version": "v1",
+    "intent_id": null,
+    "subject": {
+      "description": "a lone astronaut",
+      "count": null,
+      "pose_action": "standing still"
+    },
+    "composition": {
+      "framing": "medium shot"
+    },
+    "environment": {
+      "mode": "studio",
+      "location": "seamless grey backdrop"
+    },
+    "style": {
+      "primary": "cinematic realism",
+      "description": null
+    },
+    "lighting": {
+      "character": "dramatic side light"
+    },
+    "camera": {
+      "angle": null,
+      "depth_of_field": null
+    },
+    "color": {
+      "palette": null
+    },
+    "resolutions": {},
+    "pinned_paths": []
+  },
+  "execution_context": null,
+  "expected": {
+    "intent": {
+      "schema_version": "v1",
+      "intent_id": null,
+      "subject": {
+        "description": "a lone astronaut",
+        "count": null,
+        "pose_action": "standing still"
+      },
+      "composition": {
+        "framing": "medium shot"
+      },
+      "environment": {
+        "mode": "studio",
+        "location": "seamless grey backdrop"
+      },
+      "style": {
+        "primary": "cinematic realism",
+        "description": null
+      },
+      "lighting": {
+        "character": "dramatic side light"
+      },
+      "camera": {
+        "angle": null,
+        "depth_of_field": null
+      },
+      "color": {
+        "palette": null
+      },
+      "resolutions": {},
+      "pinned_paths": []
+    },
+    "applied_deltas": [],
+    "issues": [],
+    "unresolved_decisions": [
+      {
+        "path": "camera.angle",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'camera.angle' (perceptual) is unresolved: 'camera.angle' has no value and no resolution record; rule required_if='when_camera_specified'"
+      },
+      {
+        "path": "color.palette",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'color.palette' (perceptual) is unresolved: 'color.palette' has no value and no resolution record; rule required_if='never'"
+      },
+      {
+        "path": "camera.depth_of_field",
+        "materiality": "perceptual",
+        "action": "omit",
+        "reason": "omittable decision 'camera.depth_of_field' (perceptual) is unresolved: 'camera.depth_of_field' has no value and no resolution record; rule required_if='when_camera_specified'"
+      }
+    ],
+    "conflicts": [],
+    "question": null,
+    "ready_for_confirmation": true
+  }
+}

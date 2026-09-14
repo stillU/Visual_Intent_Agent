@@ -1,0 +1,13 @@
+# Secrets — never commit, package, or copy into any deliverable
+.env
+api.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Runtime data (SQLite DB, downloaded generation outputs)
+data/
+outputs/

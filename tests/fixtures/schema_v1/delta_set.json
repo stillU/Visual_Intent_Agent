@@ -1,0 +1,13 @@
+{
+  "operation": "SET",
+  "path": "subject.count",
+  "value": 2,
+  "resolution": "user_specified",
+  "evidence_refs": [
+    {
+      "message_id": "msg_20000000000000000000000000000001",
+      "fragment": "there should be two foxes",
+      "pending_question_id": null
+    }
+  ]
+}

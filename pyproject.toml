@@ -1,0 +1,30 @@
+[project]
+name = "visual-intent-agent"
+version = "0.1.0"
+description = "Visual Intent Agent MVP v0.2: structured VisualIntent -> clarification -> hard confirmation -> prompt -> image generation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.13",
+    "httpx>=0.28",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+# Non-package project: uv sync installs dependencies into .venv without
+# building/installing the project itself. Imports work via pytest pythonpath.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Default test runs are fully offline. Real-provider smoke tests are excluded
+# unless explicitly selected with: uv run pytest -m smoke
+addopts = "-m 'not smoke'"
+markers = [
+    "smoke: real-provider tests; require credentials from .env / env vars; excluded from the default offline run",
+]
