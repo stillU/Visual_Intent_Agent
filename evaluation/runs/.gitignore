@@ -1,0 +1,6 @@
+# evaluation/runs/ 是运行产物目录（协议第 8 节；运行期生成，不入 git 交付）。
+# 注意：真实运行产生的图片/SQLite 为二进制——Step 01 冻结的凭据卫生扫描按
+# UTF-8 读取 evaluation/ 下全部文件，运行默认离线测试套件前请移出/清空本目录
+#（或用 `uv run python -m evaluation.runner --output-root <仓库外路径>`）。
+*
+!.gitignore

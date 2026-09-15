@@ -1,6 +1,6 @@
 {
   "case_id": "hard_conflict_over_missing",
-  "description": "存在 Hard Conflict（environment.mode=studio 与 environment.location=outdoor）时优先于任何 Missing Decision。",
+  "description": "R1-A（policy.v2）：'摄影棚 × 户外地点' 关键词硬冲突已停用（摄影棚可搭海滩布景）。此处独立判定：conflicts 必须为空，且 style.primary（core，always）缺失仍是第一优先级的 block 问题 → ready=False、question.target_path=style.primary。",
   "intent": {
     "schema_version": "v1",
     "intent_id": null,
@@ -113,23 +113,21 @@
         "reason": "omittable decision 'camera.depth_of_field' (perceptual) is unresolved: 'camera.depth_of_field' has no value and no resolution record; rule required_if='when_camera_specified'"
       }
     ],
-    "conflicts": [
-      {
-        "code": "policy.hard_conflict.environment_mode_location",
-        "message": "environment.mode declares an enclosed/indoor setting while environment.location names an open-air place",
-        "path": "environment.mode",
-        "severity": "error"
-      }
-    ],
+    "conflicts": [],
     "question": {
-      "target_path": "environment.mode",
-      "reason": "environment.mode declares an enclosed/indoor setting while environment.location names an open-air place",
+      "target_path": "style.primary",
+      "reason": "blocking decision 'style.primary' (core) is unresolved: 'style.primary' has no value and no resolution record; rule required_if='always'",
       "allow_delegate": true,
       "allow_custom": true,
-      "suggested_values": [],
+      "suggested_values": [
+        "photorealistic",
+        "cinematic",
+        "illustration"
+      ],
       "question_text": null,
       "question_id": null
     },
     "ready_for_confirmation": false
-  }
+  },
+  "r1a_reason": "REVISION_001_SHORTEST_PATH.md §R1-A 4 + 协调者裁定：不能仅凭词表把布景组合判成矛盾。停用后本条不再报告 hard conflict，expected.conflicts 为空；缺失决策的优先级与问题选择不变。"
 }

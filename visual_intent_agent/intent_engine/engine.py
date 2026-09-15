@@ -59,7 +59,7 @@ class IntentEngine:
             interpreted.candidate_deltas, context, request.current_intent
         )
         reduced = reduce(request.current_intent, validation.accepted)
-        policy_resolution = assess(reduced.intent)
+        policy_resolution = assess(reduced.intent, request.execution_context)
 
         issues: list[Issue] = []
         issues.extend(validation.issues)
@@ -97,7 +97,7 @@ class IntentEngine:
         request: IntentResolveRequest, issue: Issue
     ) -> IntentResolution:
         """可恢复失败的统一返回：intent 原样、无 Delta、不可确认、issue 可观察。"""
-        base = assess(request.current_intent)
+        base = assess(request.current_intent, request.execution_context)
         return base.model_copy(
             update={
                 "applied_deltas": [],

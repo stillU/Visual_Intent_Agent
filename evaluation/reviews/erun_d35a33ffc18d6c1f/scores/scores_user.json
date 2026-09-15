@@ -1,0 +1,703 @@
+{
+  "completed_at": "2026-09-15T02:37:11.428Z",
+  "reviewer_id": "change",
+  "samples": [
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 3,
+          "reason": "右侧具有合理布局以及合适的暖光",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_001",
+      "user_preference": {
+        "choice": "right",
+        "reason": "左侧更加暖光，但是暖光程度太大，图片其他的布局不合理"
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "无法突出登山者的个人情绪",
+          "right": 2
+        }
+      },
+      "sample_id": "pair_002",
+      "user_preference": {
+        "choice": "left",
+        "reason": "左侧细节不足但是没有直接望着镜头"
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "左侧不够自然",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_003",
+      "user_preference": {
+        "choice": "right",
+        "reason": "右侧细节充分，细节舒服"
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "右侧不够远景",
+          "right": 3
+        }
+      },
+      "sample_id": "pair_004",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 3,
+          "reason": "左侧的猫爪子都翻过去了",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_005",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 1,
+          "reason": "左侧无法突出自然光的要求",
+          "right": 3
+        }
+      },
+      "sample_id": "pair_006",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "左侧不符合猫的正常生长逻辑",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_007",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "两边都还可以，但是左侧的能突出老人的慵懒感",
+          "right": 3
+        }
+      },
+      "sample_id": "pair_008",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "左侧的狐狸犬都变成狐狸了",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_009",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_010",
+      "user_preference": {
+        "choice": "tie",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "左侧的金毛耳朵生成不对劲",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_011",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "视角变近可以适当地展现效果但是明显右侧更加有变近的空间",
+          "right": 4
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "左侧猫不是正常的橘猫，风格也不如右侧",
+          "right": 5
+        }
+      },
+      "sample_id": "pair_012",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "已经够近了",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": 5,
+          "reason": "这样可以突出猫的细节",
+          "right": 5
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "右侧猫的眼睛太丑了",
+          "right": 2
+        }
+      },
+      "sample_id": "pair_013",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "画面难以容下其他的狗",
+          "right": 3
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "左侧眼睛有神，右侧眼睛没神",
+          "right": 2
+        }
+      },
+      "sample_id": "pair_014",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        },
+        "edit_success": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_015",
+      "user_preference": {
+        "choice": "tie",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "左侧的钢琴生成错误，过于不合理",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_016",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 5,
+          "reason": "光线都欠缺一些",
+          "right": 5
+        },
+        "edit_success": {
+          "left": 2,
+          "reason": "",
+          "right": 1
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "戏剧性的光一般指的电影感",
+          "right": 2
+        }
+      },
+      "sample_id": "pair_017",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "",
+          "right": 1
+        },
+        "edit_success": {
+          "left": 2,
+          "reason": "",
+          "right": 5
+        },
+        "intent_alignment": {
+          "left": 5,
+          "reason": "猫被删了",
+          "right": 1
+        }
+      },
+      "sample_id": "pair_018",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": 3
+        }
+      },
+      "sample_id": "pair_019",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "",
+          "right": 3
+        },
+        "edit_success": {
+          "left": 2,
+          "reason": "没有改变",
+          "right": 2
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "左侧的能够看出表情",
+          "right": 2
+        }
+      },
+      "sample_id": "pair_020",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_021",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "",
+          "right": 5
+        },
+        "edit_success": {
+          "left": 2,
+          "reason": "",
+          "right": 4
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "沙发和楼梯位置有问题",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_022",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 1,
+          "reason": "左侧没拉全景",
+          "right": 4
+        },
+        "edit_success": {
+          "left": 3,
+          "reason": "",
+          "right": 4
+        },
+        "intent_alignment": {
+          "left": 3,
+          "reason": "右侧除了楼梯生成出错之外都还可以",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_023",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "",
+          "right": 4
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 2,
+          "reason": "",
+          "right": 5
+        }
+      },
+      "sample_id": "pair_024",
+      "user_preference": {
+        "choice": "right",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        },
+        "edit_success": {
+          "left": 5,
+          "reason": "",
+          "right": 2
+        },
+        "intent_alignment": {
+          "left": 1,
+          "reason": "窗子外的地点生成错误",
+          "right": 1
+        }
+      },
+      "sample_id": "pair_025",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 4,
+          "reason": "",
+          "right": 3
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_026",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "",
+          "right": 3
+        },
+        "edit_success": {
+          "left": 5,
+          "reason": "",
+          "right": 4
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": null
+        }
+      },
+      "sample_id": "pair_027",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 3,
+          "reason": "",
+          "right": 3
+        },
+        "edit_success": {
+          "left": "not_applicable",
+          "reason": "",
+          "right": "not_applicable"
+        },
+        "intent_alignment": {
+          "left": 5,
+          "reason": "",
+          "right": 3
+        }
+      },
+      "sample_id": "pair_028",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    },
+    {
+      "dimensions": {
+        "attribute_preservation": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        },
+        "edit_success": {
+          "left": 5,
+          "reason": "",
+          "right": 2
+        },
+        "intent_alignment": {
+          "left": 4,
+          "reason": "",
+          "right": 4
+        }
+      },
+      "sample_id": "pair_029",
+      "user_preference": {
+        "choice": "left",
+        "reason": ""
+      }
+    }
+  ],
+  "schema_version": "layer4_scores_v1"
+}

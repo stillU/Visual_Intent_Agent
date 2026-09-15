@@ -33,8 +33,10 @@ EXPECTED_DECISIONS: dict[str, tuple[str, str, bool, tuple[str, ...]]] = {
 }
 
 
-def test_policy_version_is_frozen_policy_v1() -> None:
-    assert POLICY_VERSION == "policy.v1"
+def test_policy_version_is_bumped_for_the_r1a_revision() -> None:
+    # v2（MVP v0.3 更改书 001 · R1-A）：停用全部四条不成立的冲突启发式（判定恒 False），
+    # Decision 规则表与其余 policy 语义不变；registry 合同保留（见 test_policy_conflicts.py）。
+    assert POLICY_VERSION == "policy.v2"
 
 
 def test_decision_policies_contain_exactly_nine_entries() -> None:

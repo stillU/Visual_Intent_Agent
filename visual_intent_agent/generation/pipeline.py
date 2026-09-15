@@ -134,8 +134,13 @@ class GenerationPipeline:
             raise
         return self._generate_from_prompt_artifact(session_id, prompt_artifact)
 
-    def retry(self, session_id: str, generation_id: str) -> GenerationArtifact:
+    def retry(
+        self, session_id: str, generation_id: str | None = None
+    ) -> GenerationArtifact:
         """在 FAILED 状态下用**同一** PromptArtifact 重试；新 generation_id，历史不覆盖。
+
+        省略 generation_id 时显式重试本会话最新的已落库 PromptArtifact，供未产生
+        GenerationArtifact 的 Provider 失败恢复使用；调用方无需从日志获取或伪造 ID。
 
         原 GenerationArtifact 不存在时（纯 Provider 失败按契约不写 Artifact）回退到本会话
         最新一条 PromptArtifact（`get_latest_prompt_artifact`，Rev.2 裁定 1）；回退只读取
@@ -268,11 +273,11 @@ class GenerationPipeline:
         return output_refs
 
     def _load_retry_prompt_artifact(
-        self, session_id: str, generation_id: str
+        self, session_id: str, generation_id: str | None
     ) -> PromptArtifact:
         """加载 retry 要复用的 PromptArtifact（原 Artifact 路径，缺失则 Rev.2 回退路径）。
 
-        - `generation_id` 为空 → `generation.artifact_not_found`（retry 需要失败现场 id）；
+        - `generation_id` 为 None → 显式选本会话最新已落库 Prompt；空字符串仍拒绝；
         - 原 GenerationArtifact 存在 → 取 `refs["prompt_artifact_id"]` 读回同一
           PromptArtifact（跨会话 → `generation.session_mismatch`）；
         - 原 GenerationArtifact 不存在（纯 Provider 失败不写 Artifact）→
@@ -281,6 +286,8 @@ class GenerationPipeline:
 
         两条路径都只读取**已落库**的 PromptArtifact，绝不重新 compile。
         """
+        if generation_id is None:
+            return self._latest_retry_prompt_artifact(session_id)
         if not isinstance(generation_id, str) or not generation_id.strip():
             raise GenerationError(
                 GENERATION_ARTIFACT_NOT_FOUND,
@@ -292,21 +299,22 @@ class GenerationPipeline:
             # 纯 Provider 失败按契约不写 GenerationArtifact → 回退到本会话最新
             # PromptArtifact（即该次失败 generate 刚编译落库的那一条）。查询按
             # session_id 过滤，故无需再校验跨会话。
-            latest = self._repo.get_latest_prompt_artifact(session_id)
-            if latest is None:
-                raise GenerationError(
-                    GENERATION_ARTIFACT_NOT_FOUND,
-                    f"no GenerationArtifact exists for generation_id={generation_id!r} and "
-                    f"session {session_id!r} has never compiled a PromptArtifact; "
-                    "there is no original Prompt to reuse",
-                ) from None
-            return PromptArtifact.model_validate_json(latest.payload)
+            return self._latest_retry_prompt_artifact(session_id)
         if stored.session_id != session_id:
             raise GenerationError(
                 GENERATION_SESSION_MISMATCH,
                 f"generation {generation_id!r} belongs to another session",
             )
         return self._load_prompt_artifact(session_id, stored.refs["prompt_artifact_id"])
+
+    def _latest_retry_prompt_artifact(self, session_id: str) -> PromptArtifact:
+        latest = self._repo.get_latest_prompt_artifact(session_id)
+        if latest is None:
+            raise GenerationError(
+                GENERATION_ARTIFACT_NOT_FOUND,
+                f"session {session_id!r} has no persisted PromptArtifact to retry",
+            ) from None
+        return PromptArtifact.model_validate_json(latest.payload)
 
     def _load_prompt_artifact(self, session_id: str, prompt_artifact_id: str) -> PromptArtifact:
         try:

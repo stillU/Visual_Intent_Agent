@@ -203,7 +203,9 @@ class FeedbackError(Exception):
 class FeedbackParseError(FeedbackError):
     """LLM 输出无法解析为 `FeedbackResult`（可恢复：不猜测修复）。
 
-    `retryable=True` 表示调用方可以重新解释同一条消息（引擎自身不重试、不修复）。
+    `retryable=True` 表示调用方可以重新解释同一条消息。引擎自身**不重试解析失败、
+    不修复**；仅可重试 Provider 错误在引擎内最多尝试 2 次（MVP v0.3 Step 06 patch 002，
+    见 `docs/handoffs/architecture_decision_004.md`）。
     """
 
     def __init__(self, code: str, message: str, *, retryable: bool = True) -> None:

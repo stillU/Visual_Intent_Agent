@@ -1,6 +1,6 @@
 {
   "case_id": "execution_conflict_non_blocking",
-  "description": "Execution Conflict（wide framing 与 1024x1024 输出比例冲突）只报告、不阻塞 ready。",
+  "description": "R1-A（policy.v2）：'远景/宽幅构图 × 方形输出' 执行冲突已停用 —— 构图词表达景别，不是宽高比要求。此处独立判定：conflicts 必须为空、execution context 仍被读入、所有 block 决策已解决 → ready=True、无需澄清。",
   "intent": {
     "schema_version": "v1",
     "intent_id": null,
@@ -97,15 +97,9 @@
         "reason": "omittable decision 'camera.depth_of_field' (perceptual) is unresolved: 'camera.depth_of_field' has no value and no resolution record; rule required_if='when_camera_specified'"
       }
     ],
-    "conflicts": [
-      {
-        "code": "policy.execution_conflict.framing_aspect_mismatch",
-        "message": "composition.framing requires a wide composition but the execution output aspect ratio is below 1.5",
-        "path": "composition.framing",
-        "severity": "error"
-      }
-    ],
+    "conflicts": [],
     "question": null,
     "ready_for_confirmation": true
-  }
+  },
+  "r1a_reason": "REVISION_001_SHORTEST_PATH.md §R1-A 3：'远景不等于宽高比要求'。停用后本条不再报告 execution conflict，因此 expected.conflicts 为空；expected 其余字段不变。"
 }

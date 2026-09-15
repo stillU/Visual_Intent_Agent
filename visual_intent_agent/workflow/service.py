@@ -38,16 +38,32 @@
 可恢复失败的"最多修复一次"（设计书：不合法输出最多修复一次；Step 05 把该决策交给
 Step 06）：`IntentEngine.resolve` 返回的 issue 命中可重试类别时，用同一请求再解析一次
 （总计最多 2 次调用），仍失败则按可恢复 issue 返回、不猜测修复、不静默吞。
+
+【Rev.5 · MVP v0.3 更改书 002 · 工包 B】重试耗尽后的**可恢复失败**语义：
+
+- 用户消息仍然落库（不丢用户输入）；原 Intent / 既有 PIN / 既有 revision 不变；
+- **不再**把 `assess` 对未变 Intent 生成的"空理解问题"当成新的澄清需求推进会话：
+  有既存 Pending Question 时保持**同一个**问题并回到 `WAITING_CLARIFICATION`，
+  没有则留在 `UNDERSTANDING`；本轮以 `SubmitMessageOutcome.recoverable_failure=True`
+  + `failure_codes`（底层 `interpreter.unparseable_output.*` / `provider.*`）显式报告
+  "本轮未处理成功"，客户端可显式重试；
+- **过期请求保护**：解析期间会话被别的轮次推进（revision / pending question / 消息集
+  变化）时，本轮结果整体作废（`failure_codes` 含 `workflow.stale_revision`），绝不把
+  旧请求的 Delta 应用到新 revision；
+- 不新增第三层重试：`MAX_INTERPRETATION_ATTEMPTS` 与 FeedbackEngine 的
+  `MAX_FEEDBACK_ATTEMPTS` 仍各自为 Adapter 之上唯一的有界引擎层重试。
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from visual_intent_agent.config import Settings
 from visual_intent_agent.domain import (
     ExecutionRevision,
     IntentRevision,
+    Issue,
+    Severity,
     VisualIntent,
     new_id,
     utc_now,
@@ -60,7 +76,7 @@ from visual_intent_agent.persistence import (
     SessionSnapshot,
     WorkflowState,
 )
-from visual_intent_agent.policy import IntentResolution
+from visual_intent_agent.policy import IntentResolution, assess
 from visual_intent_agent.providers.errors import RETRYABLE_CODES
 from visual_intent_agent.realization.carry import build_carry_state, evaluate_carry
 from visual_intent_agent.realization.models import RealizationState
@@ -75,6 +91,7 @@ from .confirmation import (
     compute_summary_hash,
     derive_change_summary,
 )
+from .models import engine_failure_codes, turn_failure_codes
 from .questions import PendingQuestion, QuestionBuilder
 
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
@@ -109,7 +126,13 @@ class SubmitMessageOutcome(BaseModel):
     - `resolution`：本次 `IntentEngine.resolve` 的结果（含 applied deltas 与全部 issues）；
     - `pending_question`：当前生效的待答问题（有则非 None；ready 时为 None）；
     - `confirmation_summary`：仅当进入 `WAITING_CONFIRMATION` 时给出，客户端展示它并把
-      `compute_summary_hash(...)` 交给 `confirm_current_intent`。
+      `compute_summary_hash(...)` 交给 `confirm_current_intent`；
+    - `recoverable_failure`（Rev.5 向后兼容新增，默认 False）：本轮**未处理成功**
+      （解析失败 / Provider 失败 / 过期请求）。为 True 时状态与 Intent 均未被本轮推进，
+      客户端应提示"本轮未处理成功，可重试"；`resolution.applied_deltas` 恒为空；
+    - `failure_codes`（Rev.5 向后兼容新增，默认空元组）：失败原因 code（ERROR 级 issue，
+      按出现顺序去重）。过期请求含既有 `workflow.stale_revision`；客户端据此区分
+      "可重试的引擎失败"与"会话已被推进，需刷新后重试"。
     """
 
     model_config = _FROZEN
@@ -118,6 +141,8 @@ class SubmitMessageOutcome(BaseModel):
     resolution: IntentResolution
     pending_question: PendingQuestion | None = None
     confirmation_summary: ConfirmationSummary | None = None
+    recoverable_failure: bool = False
+    failure_codes: tuple[str, ...] = ()
 
 
 class WorkflowService:
@@ -180,8 +205,39 @@ class WorkflowService:
                 previous_question.to_spec() if previous_question is not None else None
             ),
             available_message_ids=frozenset(snapshot.message_ids),
+            # 【Step 06 · P3】把会话当前 ExecutionRevision 接进策略评估，使
+            # `execution_conflict.*`（输出比例类冲突）可达；此前 assess 恒用 None，
+            # 该规则是死代码（证据 FC-P3-execution-context-never-passed）。
+            execution_context=_current_execution_revision(self._repo, snapshot),
         )
         resolution = self._resolve_with_single_repair(request)
+
+        # 【Rev.5 · 工单 B】过期请求保护：解析期间会话被别的轮次推进（revision /
+        # pending question / 消息集变化）→ 本轮结果整体作废，绝不把旧请求的 Delta 套到
+        # 新 revision（Repository 也会以 persistence.stale_revision 拒绝，这里提前转为
+        # 显式可恢复失败，避免把用户消息留在异常路径上）。
+        if not self._request_is_current(session_id, snapshot):
+            return self._recoverable_outcome(
+                session_id=session_id,
+                resolution=_stale_resolution(
+                    request.current_intent, request.execution_context
+                ),
+                failure_codes=turn_failure_codes(resolution.issues, stale=True),
+            )
+
+        # 【Rev.5 · 工单 B】重试耗尽后的可恢复失败：保留用户消息 / 原 Intent / 既有 PIN，
+        # 不把 `assess` 对未变 Intent 生成的"空理解问题"当成新的澄清需求推进会话。
+        if engine_failure_codes(resolution.issues):
+            if previous_question is not None:
+                # 保留**同一个** Pending Question（id/payload 未动），只把状态放回等待澄清。
+                self._repo.transition_state(
+                    session_id, WorkflowState.WAITING_CLARIFICATION
+                )
+            return self._recoverable_outcome(
+                session_id=session_id,
+                resolution=resolution,
+                failure_codes=turn_failure_codes(resolution.issues),
+            )
 
         if resolution.applied_deltas:
             revision = IntentRevision(
@@ -308,6 +364,41 @@ class WorkflowService:
 
     # -- 内部实现 ----------------------------------------------------------
 
+    def _request_is_current(self, session_id: str, snapshot: SessionSnapshot) -> bool:
+        """本轮请求是否仍绑定当前会话头（过期请求保护，Rev.5 · 工单 B）。
+
+        比较解析前捕获的 `snapshot` 与当前快照：状态必须仍是本轮入口设置的
+        `UNDERSTANDING`，且当前 intent/execution revision、pending question、消息集
+        均未变化。任一变化都说明别的轮次已推进会话，本轮结果不得应用。
+        """
+        current = self._repo.get_current_session_snapshot(session_id)
+        return (
+            current.workflow_state is WorkflowState.UNDERSTANDING
+            and current.current_intent_revision_id == snapshot.current_intent_revision_id
+            and current.current_execution_revision_id
+            == snapshot.current_execution_revision_id
+            and current.pending_question_id == snapshot.pending_question_id
+            and current.message_ids == snapshot.message_ids
+        )
+
+    def _recoverable_outcome(
+        self,
+        *,
+        session_id: str,
+        resolution: IntentResolution,
+        failure_codes: tuple[str, ...],
+    ) -> SubmitMessageOutcome:
+        """组装"本轮未处理成功"的返回（状态与 Intent 均未被本轮推进）。"""
+        final = self._repo.get_current_session_snapshot(session_id)
+        return SubmitMessageOutcome(
+            snapshot=final,
+            resolution=resolution,
+            pending_question=_decode_pending_question(final),
+            confirmation_summary=None,
+            recoverable_failure=True,
+            failure_codes=tuple(failure_codes),
+        )
+
     def _resolve_with_single_repair(self, request: IntentResolveRequest) -> IntentResolution:
         """初次解析 + 至多一次可重试失败的重试（不猜测修复，不吞 issue）。"""
         resolution = self._intent_engine.resolve(request)
@@ -351,11 +442,54 @@ def _current_intent(repo: Repository, snapshot: SessionSnapshot) -> VisualIntent
     return repo.get_intent_revision(snapshot.current_intent_revision_id).intent
 
 
+def _current_execution_revision(
+    repo: Repository, snapshot: SessionSnapshot
+) -> ExecutionRevision | None:
+    """当前 ExecutionRevision（Step 06 · P3）。
+
+    `create_session` 必定落盘一条初始 ExecutionRevision，因此正常情况下恒非 None；
+    指针缺失时返回 None —— 保持"不猜测执行上下文"的既有语义，绝不伪造输出尺寸。
+    """
+    if snapshot.current_execution_revision_id is None:
+        return None
+    return repo.get_execution_revision(snapshot.current_execution_revision_id)
+
+
 def _decode_pending_question(snapshot: SessionSnapshot) -> PendingQuestion | None:
     """从会话 payload 反序列化待答问题（payload 形态由本步自定义为 JSON）。"""
     if snapshot.pending_question_id is None or snapshot.pending_question_payload is None:
         return None
     return PendingQuestion.model_validate_json(snapshot.pending_question_payload)
+
+
+def _stale_resolution(
+    current_intent: VisualIntent,
+    execution_context: ExecutionRevision | None,
+) -> IntentResolution:
+    """过期请求的可观察 resolution（原 Intent 评估 + 显式 stale issue、无 Delta）。
+
+    本轮解析结果整体作废：这里回到**当前仍生效的** Intent（revision 未变，即请求携带
+    的 Intent）重新评估，并强制 `applied_deltas=[]` / `ready_for_confirmation=False`，
+    确保客户端不会把过期结果当成可确认状态。
+    """
+    base = assess(current_intent, execution_context)
+    return base.model_copy(
+        update={
+            "applied_deltas": [],
+            "issues": [
+                Issue(
+                    code=WORKFLOW_STALE_REVISION,
+                    message=(
+                        "the session advanced while this message was being interpreted; "
+                        "this turn was discarded and no delta was applied to the new revision"
+                    ),
+                    severity=Severity.ERROR,
+                ),
+                *base.issues,
+            ],
+            "ready_for_confirmation": False,
+        }
+    )
 
 
 def _has_retryable_failure(resolution: IntentResolution) -> bool:

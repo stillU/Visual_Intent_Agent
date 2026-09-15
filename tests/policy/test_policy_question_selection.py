@@ -45,26 +45,28 @@ def test_core_missing_outranks_perceptual_missing() -> None:
     assert result.question.target_path == "style.primary"
 
 
-def test_perceptual_missing_outranks_execution_conflict() -> None:
+def test_perceptual_missing_still_blocks_after_the_execution_rule_is_retired() -> None:
+    """R1-A 停用"远景 × 方形输出"后：不再有执行冲突，perceptual 缺失照常阻塞。"""
     values = dict(READY_VALUES)
     del values["subject.pose_action"]  # perceptual 缺失
-    values["composition.framing"] = "wide shot"  # 与 1024x1024 冲突
+    values["composition.framing"] = "wide shot"  # 曾是 execution conflict 的组合
     result = assess(intent_from(values), execution("1024x1024"))
-    assert [issue.code for issue in result.conflicts] == [
-        "policy.execution_conflict.framing_aspect_mismatch"
-    ]
+    assert result.conflicts == []
     assert result.question is not None
     assert result.question.target_path == "subject.pose_action"
 
 
-def test_hard_conflict_outranks_core_missing_for_the_question() -> None:
+def test_retired_hard_conflict_combination_asks_for_the_missing_core_decision() -> None:
+    """R1-A 停用"摄影棚 × 户外地点"后：不再有冲突问题，回归普通缺失决策问题。"""
     intent = intent_from(
         {"environment.mode": "studio", "environment.location": "an outdoor street"}
     )
     result = assess(intent)
+    assert result.conflicts == []
     assert result.question is not None
-    assert result.question.target_path == "environment.mode"
-    assert result.question.reason.startswith("environment.mode declares")
+    # environment.mode 本身有值：第一个未解决的 core 决策是 subject.description。
+    assert result.question.target_path == "subject.description"
+    assert not result.question.reason.startswith("environment.mode declares")
 
 
 def test_question_allow_delegate_follows_the_decision_policy() -> None:
@@ -116,14 +118,18 @@ def test_open_ended_decisions_have_no_suggested_values() -> None:
     assert question.suggested_values == ()
 
 
-def test_conflict_questions_have_no_suggested_values() -> None:
+def test_retired_conflict_combinations_produce_no_conflict_question() -> None:
+    """停用后组合不再是冲突：问题来自缺失决策，不来自冲突路径。"""
     intent = intent_from(
-        {"environment.mode": "studio", "environment.location": "an outdoor street"}
+        {"subject.description": "a lone astronaut", "environment.mode": "studio",
+         "environment.location": "an outdoor street"}
     )
-    question = assess(intent).question
+    result = assess(intent)
+    assert result.conflicts == []
+    question = result.question
     assert question is not None
-    assert question.suggested_values == ()
-    assert question.target_path == "environment.mode"
+    # 不是 environment.mode（它已有值），而是第一个缺失的 core 决策。
+    assert question.target_path == "style.primary"
 
 
 def test_question_reason_is_deterministic_and_names_the_rule() -> None:

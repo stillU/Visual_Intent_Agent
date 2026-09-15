@@ -27,7 +27,14 @@
   （否则 `workflow.generation_not_found` / `workflow.generation_mismatch`）；
   `FeedbackResult` 落库 refs 严格为 `{"generation_id"}`；
 - **历史不可覆盖**：IntentRevision / RealizationState / FeedbackResult 一律只增不改；
-  失效产生**新** RealizationState（旧值显式 invalidated），旧确认由 revision 变化天然失效。
+  失效产生**新** RealizationState（旧值显式 invalidated），旧确认由 revision 变化天然失效；
+- **【Rev.5 · 工单 B】可恢复失败不推进**：引擎层失败（重试耗尽 / 解析失败 / Provider
+  失败）、Delta 全被拒、以及**过期反馈**（`analyze` 期间会话已推进到别的 revision /
+  状态）一律不产生 revision、不改变状态、不伪造问题；过期检查在**决策分支之前**统一
+  生效，因此过期 `accept` 也不会把会话推到 `COMPLETED`、过期 `clarify` 也不会落新问题。
+  反馈结果本身仍落库可追溯（过期不阻止日志写入）。用户消息与既有 Intent/PIN 保留，
+  客户端据 `FeedbackOutcome.recoverable_failure` + `failure_codes` 显式重试；过期反馈的
+  `failure_codes` 含既有 `workflow.stale_revision`。
 
 本模块**不修改** Step 06 既有文件（`questions.py` / `confirmation.py` / `service.py` /
 `__init__.py`），因此 `ReviewService` / `FeedbackOutcome` 从
@@ -49,8 +56,10 @@ from pydantic import BaseModel, ConfigDict
 
 from visual_intent_agent.domain import (
     INTENT_PATHS,
+    ExecutionRevision,
     IntentRevision,
     Issue,
+    Severity,
     VisualIntent,
     new_id,
     utc_now,
@@ -85,9 +94,14 @@ from visual_intent_agent.validation import EvidenceContext, reduce, validate
 
 from .confirmation import (
     WORKFLOW_INVALID_STATE,
+    WORKFLOW_STALE_REVISION,
     ConfirmationSummary,
     WorkflowError,
     build_confirmation_summary,
+)
+from .models import (
+    engine_failure_codes,
+    turn_failure_codes,
 )
 from .questions import PendingQuestion, QuestionBuilder
 
@@ -140,8 +154,10 @@ class FeedbackOutcome(BaseModel):
       `compute_summary_hash(...)` 交给 `WorkflowService.confirm_current_intent`）；
     - `carry`：revise 路径的 Realization 继承/失效评估；
     - `realization_state_id`：本轮是否落了新的 RealizationState（无失效时为 None）；
-    - `recoverable_failure`：可恢复失败（解析失败 / Provider 失败 / Delta 全部被拒）——
-      状态未改变、无新 revision、无新 Artifact。
+    - `recoverable_failure`：可恢复失败（解析失败 / Provider 失败 / Delta 全部被拒 /
+      过期请求）——状态未改变、无新 revision、无新 Artifact；
+    - `failure_codes`（Rev.5 向后兼容新增，默认空元组）：失败原因 code（ERROR 级 issue，
+      按出现顺序去重）。过期请求含既有 `workflow.stale_revision`。
     """
 
     model_config = _FROZEN
@@ -157,6 +173,7 @@ class FeedbackOutcome(BaseModel):
     carry: CarryEvaluation | None = None
     realization_state_id: str | None = None
     recoverable_failure: bool = False
+    failure_codes: tuple[str, ...] = ()
 
 
 class ReviewService:
@@ -209,6 +226,8 @@ class ReviewService:
 
         message_id = new_id(MESSAGE_ID_PREFIX)
         self._repo.append_message(session_id, message_id, "user", text, utc_now())
+        # 本轮请求的"应有会话头"：入口快照 + 本条新增消息（与 service.py 同口径）。
+        expected = self._repo.get_current_session_snapshot(session_id)
 
         result = self._feedback_engine.analyze(
             _request(
@@ -227,6 +246,32 @@ class ReviewService:
             {"generation_id": result.generation_id},
             result.model_dump_json(),
         )
+
+        # 【Rev.5 · 工单 B】统一过期检查（**在一切决策分支之前**）：analyze 期间会话被
+        # 别的轮次推进（状态 / intent+execution revision / pending question / 消息集）
+        # → accept / clarify / revise 一律不推进新状态，返回显式 stale 可恢复失败。
+        # 反馈结果已在上方落库（保留可追溯），过期不阻止日志写入。
+        stale = self._stale_snapshot(session_id, expected)
+        if stale is not None:
+            return self._stale_outcome(
+                session_id=session_id,
+                message_id=message_id,
+                result=result,
+                current_intent=current_intent,
+                stale=stale,
+            )
+
+        # 【Rev.5 · 工单 B】引擎层可恢复失败（重试已经用尽 / 解析失败）：本轮结果落库
+        # 可追溯，但**绝不**应用其候选、不改变状态、不伪造问题；用户消息与既有
+        # Intent/PIN 全部保留，客户端据 `recoverable_failure` 显式重试。
+        if engine_failure_codes(result.issues):
+            return self._outcome(
+                session_id=session_id,
+                message_id=message_id,
+                result=result,
+                recoverable_failure=True,
+                failure_codes=turn_failure_codes(result.issues),
+            )
 
         if result.decision is FeedbackDecision.ACCEPT:
             return self._accept(session_id, message_id, result)
@@ -273,6 +318,7 @@ class ReviewService:
                 message_id=message_id,
                 result=result,
                 recoverable_failure=True,
+                failure_codes=turn_failure_codes(result.issues),
             )
 
         # WAITING_REVIEW → UNDERSTANDING → WAITING_CLARIFICATION（既有迁移两步走）。
@@ -310,16 +356,26 @@ class ReviewService:
         )
         if not validation.accepted:
             # 没有任何 Delta 通过验证：不产生 revision、不改变状态、不猜测修复。
+            failure_resolution = _failure_resolution(
+                current_intent,
+                validation.issues,
+                _current_execution_revision(self._repo, snapshot),
+            )
             return self._outcome(
                 session_id=session_id,
                 message_id=message_id,
                 result=result,
-                resolution=_failure_resolution(current_intent, validation.issues),
+                resolution=failure_resolution,
                 recoverable_failure=True,
+                failure_codes=turn_failure_codes(failure_resolution.issues),
             )
 
         reduced = reduce(current_intent, validation.accepted)
-        policy_resolution = assess(reduced.intent)
+        # 【Step 06 · P3】评估同样携带会话当前 ExecutionRevision（证据
+        # FC-P3-execution-context-never-passed：此前 assess 恒用 None）。
+        policy_resolution = assess(
+            reduced.intent, _current_execution_revision(self._repo, snapshot)
+        )
         resolution = policy_resolution.model_copy(
             update={
                 "applied_deltas": list(validation.accepted),
@@ -454,6 +510,60 @@ class ReviewService:
 
     # -- 结果组装 ----------------------------------------------------------
 
+    def _stale_snapshot(
+        self, session_id: str, expected: SessionSnapshot
+    ) -> SessionSnapshot | None:
+        """本轮会话头被推进时返回当前快照，否则 None（统一过期检查，Rev.5 · 工单 B）。
+
+        与 `service.py::_request_is_current` 同口径：状态必须仍是本轮入口的
+        `WAITING_REVIEW`，且 intent/execution revision、pending question、消息集均未变化
+        （`expected` = 入口快照 + 本条反馈消息）。任一变化 → accept / clarify / revise
+        一律不推进新状态。
+        """
+        current = self._repo.get_current_session_snapshot(session_id)
+        if (
+            current.workflow_state is not WorkflowState.WAITING_REVIEW
+            or current.current_intent_revision_id
+            != expected.current_intent_revision_id
+            or current.current_execution_revision_id
+            != expected.current_execution_revision_id
+            or current.pending_question_id != expected.pending_question_id
+            or current.message_ids != expected.message_ids
+        ):
+            return current
+        return None
+
+    def _stale_outcome(
+        self,
+        *,
+        session_id: str,
+        message_id: str,
+        result: FeedbackResult,
+        current_intent: VisualIntent,
+        stale: SessionSnapshot,
+    ) -> FeedbackOutcome:
+        """过期反馈的显式可恢复失败（反馈日志已落库；状态与 Intent 均不推进）。"""
+        stale_issue = Issue(
+            code=WORKFLOW_STALE_REVISION,
+            message=(
+                "the session advanced while this feedback was being interpreted; "
+                "this turn was discarded and no delta was applied to the new revision"
+            ),
+            severity=Severity.ERROR,
+        )
+        return self._outcome(
+            session_id=session_id,
+            message_id=message_id,
+            result=result,
+            resolution=_failure_resolution(
+                current_intent,
+                [stale_issue],
+                _current_execution_revision(self._repo, stale),
+            ),
+            recoverable_failure=True,
+            failure_codes=turn_failure_codes([stale_issue]),
+        )
+
     def _outcome(
         self,
         *,
@@ -464,6 +574,7 @@ class ReviewService:
         carry: CarryEvaluation | None = None,
         realization_state_id: str | None = None,
         recoverable_failure: bool = False,
+        failure_codes: tuple[str, ...] = (),
     ) -> FeedbackOutcome:
         snapshot = self._repo.get_current_session_snapshot(session_id)
         summary = (
@@ -483,6 +594,7 @@ class ReviewService:
             carry=carry,
             realization_state_id=realization_state_id,
             recoverable_failure=recoverable_failure,
+            failure_codes=tuple(failure_codes),
         )
 
     def _build_summary_for(self, snapshot: SessionSnapshot) -> ConfirmationSummary:
@@ -556,11 +668,26 @@ def _pending_question_path(snapshot: SessionSnapshot) -> str | None:
     ).target_path
 
 
+def _current_execution_revision(
+    repo: Repository, snapshot: SessionSnapshot
+) -> ExecutionRevision | None:
+    """当前 ExecutionRevision（Step 06 · P3）。
+
+    与 `service._current_execution_revision` 同口径的受控重复（不抽共享 helper）；
+    指针缺失时返回 None，绝不伪造输出尺寸。
+    """
+    if snapshot.current_execution_revision_id is None:
+        return None
+    return repo.get_execution_revision(snapshot.current_execution_revision_id)
+
+
 def _failure_resolution(
-    current_intent: VisualIntent, validation_issues: list[Issue]
+    current_intent: VisualIntent,
+    validation_issues: list[Issue],
+    execution_context: ExecutionRevision | None = None,
 ) -> IntentResolution:
     """全部 Delta 被拒时的可观察 resolution（intent 原样、无 Delta、不可确认）。"""
-    base = assess(current_intent)
+    base = assess(current_intent, execution_context)
     return base.model_copy(
         update={
             "applied_deltas": [],

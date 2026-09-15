@@ -78,8 +78,8 @@ def test_scenario_6_omitted_fields_do_not_block_and_stay_unspecified() -> None:
     assert result.intent.color.palette is None
 
 
-# 7. 存在 Hard Conflict 时优先于 Missing Decision。
-def test_scenario_7_hard_conflict_outranks_missing_decisions() -> None:
+# 7. R1-A 停用"摄影棚 × 户外地点"硬冲突后，该组合不再是冲突；缺失决策照常阻塞。
+def test_scenario_7_retired_conflict_combination_does_not_override_missing_decisions() -> None:
     intent = intent_from(
         {
             "subject.description": "a lone astronaut",
@@ -88,11 +88,11 @@ def test_scenario_7_hard_conflict_outranks_missing_decisions() -> None:
         }
     )
     result = assess(intent)
-    assert result.conflicts, "Hard Conflict 必须显式输出"
+    assert result.conflicts == [], "该组合在 policy.v2 中不再判定为冲突"
     assert result.ready_for_confirmation is False
     assert result.question is not None
-    # 问题不是缺失的 style.primary，而是冲突路径 environment.mode。
-    assert result.question.target_path == "environment.mode"
+    # 冲突停用后，问题回到第一个缺失的 core 决策（style.primary）。
+    assert result.question.target_path == "style.primary"
     assert _actions(result)["style.primary"] == "block"
 
 

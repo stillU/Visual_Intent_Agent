@@ -16,7 +16,13 @@ from visual_intent_agent.intent_engine.prompts import (
 
 
 def test_prompt_version_is_recorded() -> None:
-    assert INTERPRETER_PROMPT_VERSION == "interpreter.v1"
+    # Step 06 · P1/P4：系统提示词新增边界约束（不变量/数量/处所）→ interpreter.v2；
+    # Step 06 patch 001：收窄 v2 措辞的过度泛化（明示地点必须提取、最小≠更少）→ v3；
+    # Step 06 patch 002（P6 超时缓解）：保语义精简（关键句逐字保留）→ v4；
+    # MVP v0.3 更改书 001 · R1-A：修正"一只猫也不得输出数量"的错误口径（明确数词必须
+    # 提取、未说数量才留空）并明确自由处所不推断房间 → v5
+    # （修订理由见 REVISION_001_SHORTEST_PATH.md §R1-A 与 v0_3_r2_A_handoff.md）。
+    assert INTERPRETER_PROMPT_VERSION == "interpreter.v5"
 
 
 def test_system_prompt_states_every_boundary_the_task_requires() -> None:

@@ -1,0 +1,214 @@
+{
+  "schema_version": "gate_a_initial_report_v1",
+  "report": "evaluation/reports/gate_a_initial.md",
+  "run_id": "erun_d35a33ffc18d6c1f",
+  "run_nonce": "gate-a-initial",
+  "protocol_version": "gate_a_protocol_v0_3",
+  "dataset_version": "core_v0_3",
+  "config_version": "gate_a_v0_3",
+  "repetitions": 2,
+  "l4_repetition": 1,
+  "verdict": "no_go",
+  "verdict_qualifier": "repairable",
+  "verdict_rationale": "Gate condition 1 fails: unauthorized_fields_unchanged 42/44 with 8 violations on s08-pin-unpin-001 (rep1 t5, rep2 t3), summary.gate_a_blocked=true. Conditions 2 and 4 also fail; condition 3 is weakly satisfied (edit_success B 3.6 vs A 3.2, n=10 paired); condition 5 partially holds (missing_decision_recall direction reverses between repetitions). Per the frozen protocol an L1 invariant failure forbids Go.",
+  "gate_a_blocked": true,
+  "run_integrity": {
+    "baseline_a": {"case_runs": 44, "completed": 44, "failed": 0, "images": 120, "llm_call_failures": 0},
+    "system_b": {"case_runs": 44, "completed": 33, "failed": 11, "images": 59, "failed_turns": 13, "llm_call_failures": 12},
+    "failed_turn_codes": {"workflow.invalid_state": 11, "evaluation.no_generation_under_review": 2},
+    "llm_call_failure_codes": {"provider.timeout": 12},
+    "l4_pairs": 29,
+    "l4_cases_covered": 19,
+    "l4_missing_data_entries": 31,
+    "l4_null_score_slots": 1
+  },
+  "layers": {
+    "L1": {
+      "system": "system_b",
+      "invariants": {
+        "history_append_only": {"passed": 44, "total": 44, "violations": 0},
+        "no_stale_confirmation": {"passed": 44, "total": 44, "violations": 0},
+        "pinned_not_overwritten": {"passed": 44, "total": 44, "violations": 0},
+        "unauthorized_fields_unchanged": {"passed": 42, "total": 44, "violations": 8}
+      },
+      "blocking_cases": [
+        {
+          "case_id": "s08-pin-unpin-001",
+          "repetition": 1,
+          "turn_id": "t5",
+          "metric_record_id": "emet_8aebc69dc10e4d11",
+          "case_record_id": "ecase_db61e38e69d0a5c1",
+          "turn_record_id": "eturn_24807db8aadfa204",
+          "applied_deltas": ["CLEAR subject.description", "CLEAR subject.count", "CLEAR subject.pose_action"],
+          "violations": [
+            {"path": "subject.count", "kind": "forbidden_value_changed", "before": 1, "after": null},
+            {"path": "subject.count", "kind": "forbidden_resolution_changed", "before": "user_specified", "after": null},
+            {"path": "subject.pose_action", "kind": "forbidden_value_changed", "before": "端坐在钢琴上", "after": null},
+            {"path": "subject.pose_action", "kind": "forbidden_resolution_changed", "before": "user_specified", "after": null}
+          ]
+        },
+        {
+          "case_id": "s08-pin-unpin-001",
+          "repetition": 2,
+          "turn_id": "t3",
+          "metric_record_id": "emet_8859330254893a75",
+          "case_record_id": "ecase_6c155a6afdc7a49c",
+          "turn_record_id": "eturn_12a7525d937d679a",
+          "applied_deltas": ["CLEAR subject.pose_action", "CLEAR subject.count"],
+          "violations": [
+            {"path": "subject.count", "kind": "forbidden_value_changed", "before": 1, "after": null},
+            {"path": "subject.count", "kind": "forbidden_resolution_changed", "before": "user_specified", "after": null},
+            {"path": "subject.pose_action", "kind": "forbidden_value_changed", "before": "端坐在钢琴上", "after": null},
+            {"path": "subject.pose_action", "kind": "forbidden_resolution_changed", "before": "user_specified", "after": null}
+          ]
+        }
+      ]
+    },
+    "L2": {
+      "system": "system_b",
+      "delta_accuracy": {"score": 0.8840843499934409, "matched_expected": 304, "expected_deltas": 346, "precision": 0.8502673796791444, "applied_deltas": 374, "out_of_scope": 56, "must_remain_unset_violations": 58, "rejection_failures": 1, "expected_rejections": 26, "rejections_satisfied": 7},
+      "missing_decision_recall": {"score": 0.7361111111111112, "covered": 59, "expected": 72, "misses_by_cause": {"product_over_specification": 8, "provider_timeout": 4, "turn_not_executed": 1}},
+      "clarification_precision": {"score": 0.8518518518518519, "questions_asked": 46, "questions_bad": 9, "questions_on_ready_turns": 3, "must_clarify_total": 52, "must_clarify_satisfied": 37, "bad_question_root_causes": {"s05-delegate-explicit-002": 6, "s09-multiturn-002": 2, "s08-pin-unpin-001_rep2": 1}},
+      "conflict_detection": {"score": 0.0, "detected": 0, "expected": 12, "severe_failures": 6, "missed_breakdown": {"hard_conflict.environment_mode_location": 2, "hard_conflict.lighting_environment_source": 2, "hard_conflict.style_medium_mismatch": 2, "execution_conflict.framing_aspect_mismatch": 6}},
+      "delegation_scope_accuracy": {"score": 0.8636363636363636, "expected_delegated": 18, "actual_delegated": 10, "under_delegated": 8, "over_delegated": 0, "under_cases": ["s05-delegate-explicit-002", "s09-multiturn-001", "s09-multiturn-002"]}
+    },
+    "L3": {
+      "intent_coverage": {"baseline_a": {"score": 0.9781746031746033, "groups_hit": 165, "groups_total": 168, "missing_data": 2}, "system_b": {"score": 0.9666666666666668, "groups_hit": 150, "groups_total": 156, "missing_data": 5}},
+      "model_compatibility": {"baseline_a": {"score": 1.0, "requests": 112}, "system_b": {"score": 1.0, "requests": 59}},
+      "preservation": {
+        "reported": {"baseline_a": {"score": 1.0, "groups_kept": 87, "groups_lost": 0, "pairs_scored": 34}, "system_b": {"score": 0.6911764705882353, "groups_kept": 47, "groups_lost": 35, "pairs_scored": 33}},
+        "recomputed": {"baseline_a": {"pairs_with_both_prompts": 34, "groups_kept": 87, "groups_lost": 0}, "system_b": {"pairs_with_both_prompts": 23, "groups_kept": 47, "groups_lost": 0, "pairs_with_modification_turn_prompt_missing": 10, "groups_lost_attributed_to_missing_prompt": 35}},
+        "validity": "metric_design_defect",
+        "metric_record_ids_system_b": ["emet_9a2a78d015691eee", "emet_cf6e437c0649a566"],
+        "detail": "All 35 system_b 'lost' keyword groups come from 10 modification turns that produced no prompt (valid clarification requests or PIN-protected rejections), scored as retention 0. Across the 23 comparable pairs content is preserved with zero losses (47/47), identical to Baseline A."
+      },
+      "unauthorized_addition": {
+        "baseline_a": {"hits": 2, "guard_triggered": 0, "guard_bypassed": 2, "cases": ["s04-conflict-003"], "keywords": ["写实"]},
+        "system_b": {"hits": 6, "guard_triggered": 0, "guard_bypassed": 6, "cases": ["s04-conflict-001", "s04-conflict-002", "s04-conflict-003"], "keywords": ["摄影棚", "自然光", "写实"]},
+        "note": "prompt.unauthorized_addition guard checks source-binding provenance, not conflicting-content leakage; every clause traces to the confirmed Intent, so guard_triggered=0 is correct behaviour and 'guard_bypassed' is a misleading field name."
+      }
+    },
+    "L4": {
+      "reviewer": "change",
+      "pairs": 29,
+      "user_preference": {"baseline_a_wins": 15, "system_b_wins": 12, "ties": 2, "multi": {"baseline_a_wins": 14, "system_b_wins": 11, "ties": 2}, "single": {"baseline_a_wins": 1, "system_b_wins": 1}},
+      "intent_alignment": {"baseline_a": {"mean": 3.1379310344827585, "n": 29, "distribution": {"1": 2, "2": 9, "3": 3, "4": 13, "5": 2}}, "system_b": {"mean": 3.3214285714285716, "n": 28, "missing": 1, "distribution": {"1": 2, "2": 5, "3": 5, "4": 14, "5": 2}}, "paired": {"n": 28, "baseline_a_wins": 10, "system_b_wins": 11, "ties": 7, "mean_diff_system_b_minus_baseline_a": 0.21428571428571427}},
+      "attribute_preservation": {"baseline_a": {"mean": 3.5, "n": 16, "distribution": {"1": 1, "2": 0, "3": 6, "4": 8, "5": 1}}, "system_b": {"mean": 3.5, "n": 16, "distribution": {"1": 1, "2": 0, "3": 7, "4": 6, "5": 2}}, "paired": {"n": 16, "baseline_a_wins": 3, "system_b_wins": 3, "ties": 10, "mean_diff_system_b_minus_baseline_a": 0.0}},
+      "edit_success": {"baseline_a": {"mean": 3.2, "n": 10, "distribution": {"1": 1, "2": 4, "3": 0, "4": 2, "5": 3}}, "system_b": {"mean": 3.6, "n": 10, "distribution": {"1": 0, "2": 3, "3": 1, "4": 3, "5": 3}}, "paired": {"n": 10, "baseline_a_wins": 3, "system_b_wins": 4, "ties": 3, "mean_diff_system_b_minus_baseline_a": 0.4}},
+      "validity_finding": {"sample_id": "pair_018", "case_id": "s08-pin-unpin-001", "turn_id": "t4", "issue": "reviewer preferred the Baseline image (which deleted the PIN-protected cat) and scored edit_success baseline_a=5 / system_b=2, contradicting the case annotation which states that under PIN protection not deleting the cat is the expected behaviour and that edit_success is judged against the annotation."}
+    }
+  },
+  "go_conditions": [
+    {
+      "condition": 1,
+      "name": "L1 core invariants 100% pass",
+      "status": "not_met",
+      "evidence_refs": ["outputs/evaluation_runs/erun_d35a33ffc18d6c1f/summary.json:gate_a_blocked", "emet_8aebc69dc10e4d11", "emet_8859330254893a75", "eturn_24807db8aadfa204", "eturn_12a7525d937d679a"],
+      "summary": "unauthorized_fields_unchanged 42/44; 8 violations on s08-pin-unpin-001 in both repetitions; product defect in intent_engine (CLEAR over-expansion onto subject.count / subject.pose_action)."
+    },
+    {
+      "condition": 2,
+      "name": "Clear improvement in Silent Decision, Missing Decision, or multi-turn Drift",
+      "status": "not_met",
+      "evidence_refs": ["evaluation/reports/gate_a_initial.md#31", "evaluation/reports/gate_a_initial.md#41", "emet_e86ea389f6d6633f", "emet_9a2a78d015691eee"],
+      "summary": "Silent decision: unauthorized_addition B 6 hits vs A 2 (B worse), coverage 0.967 vs 0.978. Missing decision: recall 0.736 (59/72) against a structurally absent Baseline capability. Drift: L4 attribute_preservation tied 3.5/3.5 (paired 3:3:10); L3 preservation 0.691 is a metric-design artifact with zero comparable-pair losses. No branch met."
+    },
+    {
+      "condition": 3,
+      "name": "Measurable advantage in Edit Success or User Preference",
+      "status": "weakly_met",
+      "evidence_refs": ["evaluation/reports/erun_d35a33ffc18d6c1f_layer4.json", "pair_018", "pair_022", "pair_025"],
+      "summary": "Edit Success B 3.6 vs A 3.2 (paired n=10: 4 wins / 3 losses / 3 ties; B has no score of 1 while A has one). User Preference A 15 vs B 12 (2 ties). Met only through Edit Success, with a small paired sample and one pair (pair_018) distorted by reviewer guidance non-compliance."
+    },
+    {
+      "condition": 4,
+      "name": "Clarification Cost does not cancel the gains",
+      "status": "not_met",
+      "evidence_refs": ["evaluation/reports/gate_a_initial.md#34", "emet_2e2ba61231199fbc", "ecase_fdff98fed948a0d7", "ecase_0fe30ae52f4a7c8d"],
+      "summary": "46 questions, 9 bad questions, 3 questions on ready turns, must_clarify 37/52, 11 of 44 System B case runs (25%) aborted by the state machine leaving 23 turns without a prompt, for a gain of only +0.4 edit_success."
+    },
+    {
+      "condition": 5,
+      "name": "Reproducible across the protocol's repetitions",
+      "status": "partially_met",
+      "evidence_refs": ["outputs/evaluation_runs/erun_d35a33ffc18d6c1f/cases/*.jsonl"],
+      "summary": "L1 conclusions identical in both repetitions (same 4 violations, same case). conflict_detection, delegation_scope, intent_coverage, preservation, unauthorized_addition, model_compatibility directions consistent. But missing_decision_recall reverses (rep1 30/36 = 0.833 vs rep2 29/36 = 0.806) and delta_accuracy drifts slightly, so 'key L2/L3 directions consistent' does not fully hold."
+    }
+  ],
+  "failure_classification_counts": {
+    "product_defect": 5,
+    "provider_variance": 1,
+    "protocol_defect": 2,
+    "metric_bug": 1,
+    "insufficient_data": 2,
+    "catalog_entries": 11
+  },
+  "failure_classification_counts_by_occurrence": {
+    "product_defect": {
+      "P1_l1_clear_over_expansion": {"l1_violation_checks": 8, "out_of_scope_deltas": 2},
+      "P2_conflict_vocabulary": {"expected_conflicts_missed": 12, "severe_failures": 6, "unauthorized_addition_hits": 6},
+      "P3_missing_execution_context": {"execution_conflicts_unreachable": 6},
+      "P4_baseless_concretization": {"out_of_scope_subject_count": 35, "out_of_scope_location_framing": 7, "must_remain_unset_violations": 58, "uncovered_blocking_points": 8},
+      "P5_pin_scope": {"out_of_scope_pin_deltas": 13},
+      "downstream_failed_turns_from_P2_and_P4": 11
+    },
+    "provider_variance": {"failed_llm_calls": 12, "case_runs_lost": 2, "uncovered_blocking_points": 4},
+    "protocol_defect": {"Q1_preservation_no_prompt_pairs": 10, "Q1_lost_groups_attributed": 35, "Q2_rejected_turns": 13},
+    "metric_bug": {"entries": 1, "affected_metric": "L3 preservation", "unaffected_metric_records": 0},
+    "insufficient_data": {"L4_pairs_single_reviewer": 29, "L4_edit_success_slots_per_side": 10}
+  },
+  "next_step": {
+    "recommendation": "enter_step_06",
+    "do_not_enter_step_08": true,
+    "do_not_stop_v0_3": true,
+    "fix_targets": [
+      {"id": "P1", "priority": "P0", "module": "intent_engine", "regression_cases": ["s08-pin-unpin-001#t5", "s08-pin-unpin-001#t3"], "success_check": "L1 unauthorized_fields_unchanged 44/44"},
+      {"id": "P2", "priority": "P0", "module": "policy", "regression_cases": ["s04-conflict-001#t1", "s04-conflict-002#t1", "s04-conflict-003#t1"], "success_check": "3/3 hard conflicts detected, severe_failures=0"},
+      {"id": "P3", "priority": "P1", "module": "intent_engine/workflow", "regression_cases": ["s02-missing-core-002#t3", "s09-multiturn-001#t3", "s09-multiturn-001#t4"], "success_check": "execution_conflict.framing_aspect_mismatch detected"},
+      {"id": "P4", "priority": "P1", "module": "intent_engine", "regression_cases": ["s02-missing-core-001#t1", "s02-missing-core-001#t2", "s09-multiturn-002#t1"], "success_check": "environment.location stays unset and blocks; missing_decision_recall >= 15/18 on affected points"},
+      {"id": "P5", "priority": "P2", "module": "intent_engine", "regression_cases": ["s07-single-field-002#t2"], "success_check": "PIN limited to annotated paths"},
+      {"id": "Q1", "priority": "P1", "module": "evaluation/metrics/prompt.py + new protocol version", "regression_cases": ["s08-pin-unpin-002#t1->t2", "s10-vague-feedback-001#t1->t2"], "success_check": "no-prompt modification turns reported as missing_data, not as lost retention"},
+      {"id": "Q3", "priority": "P2", "module": "evaluation/image_review.py (review UI)", "regression_cases": ["s08-pin-unpin-001#t4"], "success_check": "annotation notes shown to reviewer in Step 07"}
+    ]
+  },
+  "protocol_dataset_defects": [
+    {
+      "id": "Q1",
+      "class": "metric_design_defect",
+      "where": "evaluation/metrics/prompt.py:evaluate_preservation (lines 190-210) under frozen protocol section 4 L3",
+      "impact": "system_b preservation 0.691 is not interpretable as drift; 35/35 lost groups come from 10 turns with no prompt. Any Step 07 comparison using this metric reproduces the artifact.",
+      "compliant_fix_path": "New versioned protocol + metric version distinguishing 'no prompt produced' (missing_data, protocol section 5 already defines the state) from 'content dropped'; must not change any existing score and requires written approval of the protocol owner."
+    },
+    {
+      "id": "Q2",
+      "class": "protocol_robustness_gap",
+      "where": "evaluation/protocol.md section 3 System B driver rules 1-3; evaluation/runner.py kind->entry mapping",
+      "impact": "Once the product deviates from expected_outcome, the scripted turn kind is rejected by the frozen state machine, producing 13 failed turns. Failures stay in the denominator and no metric is inflated, so the impact is on failure classification and on the comparability of the interruption cost, not on scores.",
+      "compliant_fix_path": "Optional new protocol version: keep the kind mapping but state explicitly that a mismatch submits through the entry allowed by the current session state and records flow_deviation. Must not be used to hide failures."
+    }
+  ],
+  "traceability": {
+    "source_files": [
+      "outputs/evaluation_runs/erun_d35a33ffc18d6c1f/run.json",
+      "outputs/evaluation_runs/erun_d35a33ffc18d6c1f/summary.json",
+      "outputs/evaluation_runs/erun_d35a33ffc18d6c1f/cases/*.jsonl",
+      "evaluation/reports/erun_d35a33ffc18d6c1f_layer4.json",
+      "evaluation/reviews/erun_d35a33ffc18d6c1f/review_manifest.json",
+      "evaluation/reviews/erun_d35a33ffc18d6c1f/unblinding_map.json",
+      "evaluation/reviews/erun_d35a33ffc18d6c1f/scores/scores_user.json"
+    ],
+    "frozen_inputs_sha256": {
+      "protocol": "70cc0b3c4bde970a91172191b398cf3869df539fa0971ae85cfd849c52c26d93",
+      "dataset": "0519534702225949bede2782516cd1543c936d2fd298834ad36dd253fc63a64b",
+      "annotations": "d1712aab45c42251d920d22f6a5a6a1fe5bef964f577e2b45aead851dc6a6b57",
+      "config": "3b6159f8bc620f6c31fc85fb40a937a7ced1a71296a8c6ab9d0514c0f329905b"
+    },
+    "no_writes_beyond": [
+      "evaluation/reports/gate_a_initial.md",
+      "evaluation/reports/gate_a_initial.json",
+      "evaluation/reports/failure_catalog.jsonl",
+      "docs/handoffs/v0_3_step_05_handoff.md"
+    ],
+    "test_suite_after_step": "2086 passed, 3 deselected"
+  }
+}

@@ -347,7 +347,9 @@ def test_retryable_parse_failure_is_retried_exactly_once(tmp_path):
     assert outcome.pending_question.target_path == "style.primary"
 
 
-def test_failure_that_keeps_failing_is_reported_and_asks_for_clarification(tmp_path):
+def test_failure_that_keeps_failing_is_reported_without_advancing_the_session(tmp_path):
+    # 【更改书 002 · 工单 B】旧行为把 `assess` 对未变 Intent 生成的"空理解问题"落成新
+    # 澄清并推进到 WAITING_CLARIFICATION；R1-C 明确禁止，改为显式可恢复失败。
     repo = make_repo(tmp_path)
     llm = make_provider([invalid_json_response(), full_intent_response()])
     service = make_service(repo, llm)
@@ -359,9 +361,14 @@ def test_failure_that_keeps_failing_is_reported_and_asks_for_clarification(tmp_p
     codes = [issue.code for issue in outcome.resolution.issues]
     assert "interpreter.unparseable_output.full_intent" in codes
     assert outcome.resolution.ready_for_confirmation is False
-    assert outcome.snapshot.workflow_state is WorkflowState.WAITING_CLARIFICATION
-    assert outcome.pending_question is not None
-    assert outcome.pending_question.target_path == "subject.description"
+    # 不把空理解当成新的澄清需求推进；不伪造问题、不进入确认。
+    assert outcome.recoverable_failure is True
+    assert "interpreter.unparseable_output.full_intent" in outcome.failure_codes
+    assert outcome.snapshot.workflow_state is WorkflowState.UNDERSTANDING
+    assert outcome.pending_question is None
+    assert outcome.confirmation_summary is None
+    # 用户消息保留，可显式重试。
+    assert len(outcome.snapshot.message_ids) == 1
 
 
 def test_non_retryable_provider_failure_is_not_retried(tmp_path):
@@ -382,7 +389,11 @@ def test_non_retryable_provider_failure_is_not_retried(tmp_path):
     assert len(llm.requests) == 1
     assert any(issue.code == "provider.auth" for issue in outcome.resolution.issues)
     assert outcome.resolution.applied_deltas == []
-    assert outcome.snapshot.workflow_state is WorkflowState.WAITING_CLARIFICATION
+    # 不可重试失败同样是显式可恢复失败：不推进、不伪造问题。
+    assert outcome.recoverable_failure is True
+    assert outcome.failure_codes == ("provider.auth",)
+    assert outcome.snapshot.workflow_state is WorkflowState.UNDERSTANDING
+    assert outcome.pending_question is None
 
 
 def test_retryable_provider_failure_is_retried_once(tmp_path):
@@ -404,6 +415,10 @@ def test_retryable_provider_failure_is_retried_once(tmp_path):
     assert calls["n"] == 2
     assert outcome.resolution.applied_deltas != []
     assert outcome.snapshot.current_intent_revision_id is not None
+    # timeout → 成功：成功后只应用一次，且不是可恢复失败。
+    assert outcome.recoverable_failure is False
+    assert outcome.failure_codes == ()
+    assert len([d for d in outcome.resolution.applied_deltas]) == 1
 
 
 def test_parse_failure_on_the_confirmation_page_never_fakes_confirmation(tmp_path):
@@ -671,4 +686,6 @@ def test_submit_message_outcome_shape_is_frozen(tmp_path):
         "resolution",
         "pending_question",
         "confirmation_summary",
+        "recoverable_failure",
+        "failure_codes",
     }

@@ -69,7 +69,11 @@ def test_feedback_public_names_are_declared():
 
 
 def test_feedback_prompt_version_is_recorded():
-    assert FEEDBACK_PROMPT_VERSION == "feedback.v1"
+    # Step 06 · P1/P5：边界约束修订 → feedback.v2；
+    # Step 06 patch 002（P6 超时缓解）：保语义精简 → feedback.v3
+    # （修订理由见 fix_traceability.md patch 002 章节）；
+    # 更改书 002 工包 B：补 COUNTING/LOCATIVE 语义边界 → feedback.v4。
+    assert FEEDBACK_PROMPT_VERSION == "feedback.v4"
     assert "FEEDBACK_PROMPT_VERSION" in feedback.__all__
     assert "FEEDBACK_OUTPUT_SCHEMA" in feedback.__all__
 
@@ -153,6 +157,7 @@ def test_review_public_surface_and_error_codes():
             "carry",
             "realization_state_id",
             "recoverable_failure",
+            "failure_codes",
         }
     with pytest.raises(ValueError):
         ReviewError("workflow.unknown_code", "nope")

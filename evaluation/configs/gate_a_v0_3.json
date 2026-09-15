@@ -1,0 +1,67 @@
+{
+  "config_version": "gate_a_v0_3",
+  "description": "Gate A 冻结实验配置（MVP v0.3 Step 01）。Baseline A 与 System B 复用同一 Provider、模型、超时与重试条件；凭据只引用环境变量名，严禁明文。",
+  "credentials": {
+    "base_url_env": "VIA_PROVIDER_BASE_URL",
+    "api_key_env": "VIA_PROVIDER_API_KEY",
+    "rule": "真实值只存在于 api.md 与 .env；任何 Artifact、日志、断言、交付物中禁止明文 key"
+  },
+  "llm": {
+    "model_env": "VIA_LLM_MODEL",
+    "model_default": "qwen3.8-max",
+    "timeout_seconds_env": "VIA_LLM_TIMEOUT_SECONDS",
+    "timeout_seconds_default": 60.0,
+    "temperature": null,
+    "max_tokens": null,
+    "parameters_note": "不显式设置 temperature/max_tokens，与 System B 三处 LLM 调用点（Interpreter/FeedbackEngine/QuestionBuilder 确定性模板）的冻结行为一致；Baseline A 同样不得设置",
+    "system_b_response_format": {"type": "json_object"},
+    "baseline_response_format": null,
+    "question_builder": "deterministic_template_only"
+  },
+  "image": {
+    "model_env": "VIA_IMAGE_MODEL",
+    "model_default": "qwen-image-3.0",
+    "timeout_seconds_env": "VIA_IMAGE_TIMEOUT_SECONDS",
+    "timeout_seconds_default": 120.0,
+    "size": "1024x1024",
+    "images_per_generation": 1,
+    "seed_policy": "不主动设置 seed；仅记录 Provider 返回的 seed，未返回记 null，禁止伪造"
+  },
+  "http": {
+    "max_retries_env": "VIA_HTTP_MAX_RETRIES",
+    "max_retries_default": 2,
+    "backoff": "0.5s * 2^n",
+    "retryable_codes": ["provider.rate_limited", "provider.server_error", "provider.timeout", "provider.network"]
+  },
+  "repetitions": {
+    "llm_layer_runs_per_case": 2,
+    "image_runs_per_case": 1,
+    "rule": "L1~L3 每案例 2 次以测量 LLM 层稳定性；L4 图片每系统每案例 1 次成对产生；禁止单图重抽，复评必须整案重跑并保留全部原始记录"
+  },
+  "failure_handling": {
+    "provider_error": "仅 adapter 内按冻结策略重试；用尽后该 Turn 记 failed（携带 provider.* code），不从分母剔除",
+    "llm_unparseable_output": "属于被测系统行为（System B 走可恢复 issue 路径），原样记录，不外部重试",
+    "infrastructure_crash": "非 Provider、非被测代码的崩溃允许整案重跑 1 次；两次运行的原始记录均保留",
+    "case_result_status_enum": ["completed", "flow_deviation", "failed"]
+  },
+  "randomness_recording": {
+    "per_llm_call": ["model", "temperature_sent", "max_tokens_sent", "response_format", "provider_request_id", "latency_ms", "retry_count"],
+    "per_image_call": ["model", "size", "seed_returned", "provider_request_id", "latency_ms", "retry_count"],
+    "per_run": ["dataset_sha256", "annotations_sha256", "config_sha256", "protocol_sha256", "code_version", "protocol_version"]
+  },
+  "system_b_driver": {
+    "entry_points": {
+      "user_message": "WorkflowService.submit_message",
+      "clarification_answer": "WorkflowService.submit_message",
+      "image_feedback": "ReviewService.submit_feedback",
+      "accept": "ReviewService.submit_feedback"
+    },
+    "auto_confirmation": "会话进入 WAITING_CONFIRMATION 时 Runner 始终代表用户确认当前摘要（重算 summary_hash）并立即调用 GenerationPipeline.generate",
+    "clarification_answers": "只使用数据集脚本化文本；answer_variants 按实际待答问题 target_path 选择，无匹配用 user_text；不即兴作答，偏离记 flow_deviation"
+  },
+  "baseline_a_driver": {
+    "accept_turns": "not_executed",
+    "history": "全部已执行轮次的用户原文 + 自身前轮 Prompt 摘要；多轮输入格式由 Step 02 冻结并记录版本",
+    "l1_l2_metrics": "not_applicable"
+  }
+}

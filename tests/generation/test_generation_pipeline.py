@@ -287,7 +287,10 @@ def test_retry_requires_failed_state(tmp_path) -> None:
     assert excinfo.value.code == GENERATION_INVALID_STATE
 
 
-def test_retry_without_any_prompt_artifact_is_rejected_with_a_clear_code(tmp_path) -> None:
+@pytest.mark.parametrize("generation_id", [None, "gen_does_not_exist", ""])
+def test_retry_without_any_prompt_artifact_is_rejected_with_a_clear_code(
+    tmp_path, generation_id
+) -> None:
     # 会话从未编译过 Prompt（无任何 PromptArtifact）→ 回退也无原 Prompt 可复用。
     repo = make_repo(tmp_path)
     seeded = _seed(repo)
@@ -297,14 +300,15 @@ def test_retry_without_any_prompt_artifact_is_rejected_with_a_clear_code(tmp_pat
     assert artifact_count(repo, "prompt_artifacts") == 0
 
     with pytest.raises(GenerationError) as excinfo:
-        pipeline.retry(seeded.session_id, "gen_does_not_exist")
+        pipeline.retry(seeded.session_id, generation_id)
 
     assert excinfo.value.code == GENERATION_ARTIFACT_NOT_FOUND
     assert _state(repo, seeded.session_id) is WorkflowState.FAILED
 
 
+@pytest.mark.parametrize("use_attempt_id", [True, False])
 def test_retry_after_a_pure_provider_failure_reuses_the_latest_prompt_artifact(
-    tmp_path, caplog: pytest.LogCaptureFixture
+    tmp_path, caplog: pytest.LogCaptureFixture, use_attempt_id: bool
 ) -> None:
     """必测：纯 Provider 失败（未落 Artifact）后 retry 成功且复用同一 PromptArtifact。
 
@@ -344,7 +348,11 @@ def test_retry_after_a_pure_provider_failure_reuses_the_latest_prompt_artifact(
     assert caplog.records[-1].prompt_artifact_id == expected_prompt.prompt_artifact_id
 
     prompt_artifacts_before = artifact_count(repo, "prompt_artifacts")
-    retried = pipeline.retry(seeded.session_id, failed_generation_id)
+    retried = (
+        pipeline.retry(seeded.session_id, failed_generation_id)
+        if use_attempt_id
+        else pipeline.retry(seeded.session_id)
+    )
 
     assert _state(repo, seeded.session_id) is WorkflowState.WAITING_REVIEW
     assert retried.generation_id != failed_generation_id
@@ -366,7 +374,10 @@ def test_retry_after_a_pure_provider_failure_reuses_the_latest_prompt_artifact(
     assert output_file(retried.output_refs[0].path).read_bytes() == FAKE_PNG_BYTES
 
 
-def test_retry_fallback_rejects_a_prompt_artifact_whose_confirmation_is_stale(tmp_path) -> None:
+@pytest.mark.parametrize("generation_id", [None, "gen_from_the_failed_attempt"])
+def test_retry_fallback_rejects_a_prompt_artifact_whose_confirmation_is_stale(
+    tmp_path, generation_id
+) -> None:
     """必测：回退的 PromptArtifact 确认已失效 → 拒绝 retry，状态不变、Provider 零调用。"""
     repo = make_repo(tmp_path)
     seeded = _seed(repo)
@@ -382,7 +393,7 @@ def test_retry_fallback_rejects_a_prompt_artifact_whose_confirmation_is_stale(tm
     calls_before = len(provider.requests)
 
     with pytest.raises(GenerationError) as excinfo:
-        pipeline.retry(seeded.session_id, "gen_from_the_failed_attempt")
+        pipeline.retry(seeded.session_id, generation_id)
 
     assert excinfo.value.code == GENERATION_NO_VALID_CONFIRMATION
     assert _state(repo, seeded.session_id) is WorkflowState.FAILED

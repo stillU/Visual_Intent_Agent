@@ -1,0 +1,111 @@
+{
+  "config_version": "gate_a_v0_3_r1",
+  "protocol_version": "gate_a_protocol_v0_3_r1",
+  "dataset_version": "core_v0_3_r1",
+  "product_semantic_versions": {
+    "interpreter_prompt": "interpreter.v5",
+    "policy": "policy.v2",
+    "feedback_prompt": "feedback.v4",
+    "note": "r1 数据/口径对应的 A/B 语义版本；正式 Run 另记 code_version/commit/dirty，不以字段冒充 commit"
+  },
+  "description": "Gate A r1 冻结实验配置（MVP v0.3 更改书 001 R1-B / 002 工包 C）。继承 gate_a_v0_3 的 Provider 同条件，只修订评测口径、运行身份与产物路径；旧配置只读保留。",
+  "parent_config_version": "gate_a_v0_3",
+  "credentials": {
+    "base_url_env": "VIA_PROVIDER_BASE_URL",
+    "api_key_env": "VIA_PROVIDER_API_KEY",
+    "rule": "真实值只存在于 api.md 与 .env；任何 Artifact、日志、断言、交付物中禁止明文 key"
+  },
+  "llm": {
+    "model_env": "VIA_LLM_MODEL",
+    "model_default": "qwen3.8-max",
+    "timeout_seconds_env": "VIA_LLM_TIMEOUT_SECONDS",
+    "timeout_seconds_default": 60.0,
+    "temperature": null,
+    "max_tokens": null,
+    "parameters_note": "不显式设置 temperature/max_tokens，与 System B 三处 LLM 调用点（Interpreter/FeedbackEngine/QuestionBuilder 确定性模板）的冻结行为一致；Baseline A 同样不得设置",
+    "system_b_response_format": {"type": "json_object"},
+    "baseline_response_format": null,
+    "question_builder": "deterministic_template_only"
+  },
+  "image": {
+    "model_env": "VIA_IMAGE_MODEL",
+    "model_default": "qwen-image-3.0",
+    "timeout_seconds_env": "VIA_IMAGE_TIMEOUT_SECONDS",
+    "timeout_seconds_default": 120.0,
+    "size": "1024x1024",
+    "images_per_generation": 1,
+    "seed_policy": "不主动设置 seed；仅记录 Provider 返回的 seed，未返回记 null，禁止伪造"
+  },
+  "http": {
+    "max_retries_env": "VIA_HTTP_MAX_RETRIES",
+    "max_retries_default": 2,
+    "backoff": "0.5s * 2^n",
+    "retryable_codes": ["provider.rate_limited", "provider.server_error", "provider.timeout", "provider.network"]
+  },
+  "repetitions": {
+    "llm_layer_runs_per_case": 2,
+    "image_runs_per_case": 1,
+    "rule": "L1~L3 每案例 2 次以测量 LLM 层稳定性；L4 图片每系统每案例 1 次成对产生；禁止单图重抽，复评必须整案重跑并保留全部原始记录"
+  },
+  "failure_handling": {
+    "provider_error": "仅 adapter 内按冻结策略重试；用尽后该 Turn 记 failed（携带 provider.* code），不从分母剔除",
+    "llm_unparseable_output": "属于被测系统行为（System B 走可恢复 issue 路径），原样记录，不外部重试",
+    "infrastructure_crash": "非 Provider、非被测代码的崩溃允许整案重跑 1 次；两次运行的原始记录均保留",
+    "case_result_status_enum": ["completed", "flow_deviation", "failed"],
+    "turn_status_enum": ["completed", "skipped", "failed", "blocked"],
+    "cascade_rule": "首次失败根因（status=failed，携带 error）保留在首个失败轮；其后无法执行的脚本轮记 status=blocked、blocked_by_prior_failure=true、blocked_by_turn_id=<首个失败轮>，不重复记独立根因、不自动改送反馈入口；案例仍进入总完成率"
+  },
+  "randomness_recording": {
+    "per_llm_call": ["model", "temperature_sent", "max_tokens_sent", "response_format", "provider_request_id", "latency_ms", "retry_count"],
+    "per_image_call": ["model", "size", "seed_returned", "provider_request_id", "latency_ms", "retry_count"],
+    "per_run": ["dataset_sha256", "annotations_sha256", "config_sha256", "protocol_sha256", "manifest_sha256", "code_version", "code_commit", "code_dirty", "protocol_version"]
+  },
+  "system_b_driver": {
+    "entry_points": {
+      "user_message": "WorkflowService.submit_message",
+      "clarification_answer": "WorkflowService.submit_message",
+      "image_feedback": "ReviewService.submit_feedback",
+      "accept": "ReviewService.submit_feedback"
+    },
+    "auto_confirmation": "会话进入 WAITING_CONFIRMATION 时 Runner 始终代表用户确认当前摘要（重算 summary_hash）并立即调用 GenerationPipeline.generate；自动确认仅是实验代理，不算验证真实用户确认体验"
+  },
+  "input_policy": {
+    "rule": "r1 修订集对 A/B 使用同一份预先冻结的用户消息：每个 clarification_answer 轮的 user_text 即两系统共同输入；动态回答只用于独立交互诊断，不进入正式 A/B 比较",
+    "answer_variants": "not_allowed_in_r1",
+    "deviation_recording": "A/B 输入逐字一致；任何需要改变用户消息才成立的路径记 flow_deviation，不静默改写、不向模型泄露标注答案",
+    "order_variation": "允许脚本问题顺序与标注顺序不同的独立诊断，但同一正式 Run 内 A/B 顺序一致"
+  },
+  "baseline_a_driver": {
+    "accept_turns": "not_executed",
+    "history": "全部已执行轮次的用户原文 + 自身前轮 Prompt 摘要；多轮输入格式沿用 baseline_multiturn_v1",
+    "l1_l2_metrics": "not_applicable"
+  },
+  "identity": {
+    "rule": "正式 Run 必须记录实际 Git commit 与工作区 dirty 状态；工作区不干净时正式 Run 拒绝启动，诊断 Run 必须显式标记且结果不作为正式 Gate 证据",
+    "formal_requires_clean_worktree": true,
+    "record": ["code_version", "code_commit", "code_dirty", "identity_mode"]
+  },
+  "outputs": {
+    "real_run_root": "outputs/evaluation_runs",
+    "review_root": "outputs/evaluation_reviews",
+    "rule": "真实运行默认产物放 outputs/evaluation_runs/，避免二进制图片/SQLite 与 evaluation/ 的 UTF-8 凭据扫描冲突；evaluation/runs/ 仅保留历史与测试用途",
+    "diagnostic_run_root": "evaluation/runs"
+  },
+  "metrics": {
+    "metric_version": "v0_3_r1",
+    "guard_naming": "forbidden_keyword_hit 与 source_guard_triggered 分开报告；source_guard_bypassed 仅在存在真实编译 source-guard 绕过证据时取值，否则为 null/not_observable，禁止由关键词命中派生",
+    "count_semantics": "容许抽取结构化 subject.count 或省略结构化 count 两种合法表达，但原用户明确数量语义必须在可观察 Prompt 中保留（case 级 prompt_expectations.must_mention_groups 数量组）；完全丢失由 L3 Intent Coverage 罚",
+    "preservation": "只比较实际产生的相邻有效 Prompt 中仍被要求保留的属性（按路径关联的保留词组，跨澄清轮累计合法修改）；正常澄清/拒绝无 Prompt 记 not_applicable；应生成而失败单独记失败与完成率，不通过删除分母美化结果",
+    "completion": "新增 L3 generation_completion 指标，单独报告应生成而失败的轮次与完成率",
+    "gate_thresholds": {
+      "status": "not_frozen_in_r1",
+      "enforced_by": "EvaluationRunner._enforce_formal_prerequisites（r1 formal Run 在驱动任何案例前拒绝启动；diagnostic 允许）",
+      "rule": "正式复评前在 r1 协议中冻结改善指标、最小实际改善幅度、等待/澄清成本上限与缺失结果处理；看到结果后不得补定阈值；本轮不新增阈值，不做付费复评"
+    }
+  },
+  "image_review": {
+    "pairing": "按用户请求已推进到同一阶段成对；允许 A/B 不同澄清轮数，无法匹配的单元单独记 missing_data，不硬凑",
+    "context": "盲评页呈现完整相关用户文本、必须保留内容与目标改动；自动确认只作实验代理",
+    "scores": "保留自由偏好与指令遵守两个独立评分；PIN 下偏好删除后的图片可以记录，但不能当作遵守保护约束的成功"
+  }
+}

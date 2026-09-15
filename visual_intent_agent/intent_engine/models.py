@@ -17,7 +17,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from visual_intent_agent.domain import EvidenceRef, IntentDelta, Issue, VisualIntent
+from visual_intent_agent.domain import (
+    EvidenceRef,
+    ExecutionRevision,
+    IntentDelta,
+    Issue,
+    VisualIntent,
+)
 from visual_intent_agent.policy import QuestionSpec
 
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
@@ -67,7 +73,10 @@ class IntentResolveRequest(BaseModel):
     - `message_text`：本轮用户原文；
     - `pending_question`：当前**唯一**待答问题（Step 03 `QuestionSpec`，Step 06 经
       `PendingQuestion.to_spec()` 填充 `question_text` / `question_id`）；无则 None；
-    - `available_message_ids`：会话中可作为证据的消息 ID 集合（Validator 证据边界）。
+    - `available_message_ids`：会话中可作为证据的消息 ID 集合（Validator 证据边界）；
+    - `execution_context`：当前 ExecutionRevision（可选，**向后兼容**新增字段）。
+      Step 06 起由调用方接线，使 `assess` 能求值 `execution_conflict.*`（输出比例类
+      冲突）；为 None 时保持 v0.2 语义（不猜测执行上下文、不报 execution conflict）。
     """
 
     model_config = _FROZEN
@@ -77,6 +86,7 @@ class IntentResolveRequest(BaseModel):
     message_text: str
     pending_question: QuestionSpec | None = None
     available_message_ids: frozenset[str]
+    execution_context: ExecutionRevision | None = None
 
 
 class InterpreterResult(BaseModel):

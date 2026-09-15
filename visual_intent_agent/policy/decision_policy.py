@@ -1,4 +1,4 @@
-"""Step 03 DecisionPolicy v1：数据驱动规则表 + 确定性 evaluator。
+"""Step 03 DecisionPolicy v2：数据驱动规则表 + 确定性 evaluator。
 
 核心问题（任务书「目标」）：
 
@@ -64,6 +64,24 @@ Resolution 合法性（任务书「第一批规则原则」4/5）
 `ready_for_confirmation` = 所有 `block` 项已解决 且 无 Hard Conflict；
 Execution Conflict 只报告、不阻塞（任务书验收口径）。
 
+v2 冲突规则（MVP v0.3 更改书 001 · R1-A）
+==========================================
+
+v1 注册的四条冲突规则**全部停用**：判定标准从"两个词能否同时出现"改为"该组合能否被
+证明互斥"。四条启发式都不能被证明：
+
+    hard_conflict.lighting_environment_source  室内 + 自然光成立（室内有窗/天窗/采光顶）；
+    hard_conflict.style_medium_mismatch        写实摄影与水彩质感可混合（"摄影质感的
+                                               水彩"是真实风格，不是矛盾）；
+    execution_conflict.framing_aspect_mismatch 远景/宽幅构图不等于宽高比要求；
+    hard_conflict.environment_mode_location    摄影棚可以搭出海滩布景（"摄影棚 + 海滩"
+                                               是布景组合而非逻辑矛盾）。
+
+因此 v2 的 `CONFLICT_RULES` 为空：这些组合只是普通取值，不产生冲突、不阻塞、不改写
+任何字段，用户表达原样保留。本模块**不**新增任何冲突推理引擎，也不为停用的组合补写
+替代规则。冲突检测机制与 `is_hard_conflict` / `is_execution_conflict` 合同保留，未来
+出现有证据的确凿互斥组合时可重新注册（说明"为什么两个要求不能同时成立"）。
+
 确定性：纯函数、无随机数、无时钟、无环境变量、无 LLM；输入相同则输出逐字段相同
 （含列表顺序稳定）。`assess` 绝不修改传入的 Intent。
 """
@@ -90,7 +108,9 @@ from .models import (
 )
 
 #: 规则表版本（写入交接记录与后续 Policy 评估口径）。
-POLICY_VERSION: str = "policy.v1"
+#: v2（MVP v0.3 更改书 001 · R1-A）：停用全部四条不成立的冲突启发式（室内×自然光、
+#: 摄影×水彩质感、远景×方图、摄影棚×海滩）；Decision 规则表与其余语义与 v1 一致。
+POLICY_VERSION: str = "policy.v2"
 
 
 # ---------------------------------------------------------------------------
@@ -138,9 +158,75 @@ EXECUTION_CONFLICT_PREFIX: str = "policy.execution_conflict"
 #
 # 每条规则有稳定 rule id，通过 `DecisionPolicy.conflict_rules` 声明在相关
 # Decision 上；evaluator 按规则表顺序去重求值。冲突只显式输出，绝不覆盖字段。
+#
+# [Rev.2]（MVP v0.3 Step 06 · P2，证据 `FC-P2-conflict-vocabulary-mismatch`）：
+# 词表按"语言覆盖"扩展 —— 冻结词表原本只有英文，而 Interpreter 实际存储中文值
+# （摄影棚环境 / 海边沙滩 等），导致规则 0/12 命中。当时只补中文同义词。
+#
+# [Rev.3]（MVP v0.3 更改书 001 · R1-A）：停用**全部四条**启发式规则（含 P2 刚补过
+# 中文词表的摄影棚×海滩）。停用判据见上方模块 docstring 与下方停用记录。
+
+
+# R1-A 停用记录（MVP v0.3 更改书 001 §R1-A 3/4）
+# ================================================
+# v1 注册的四条冲突规则在 v2 中**全部停用**，但**保留 registry 合同**：rule id 仍在
+# `CONFLICT_RULES` / 规则表 `conflict_rules` 中，可被评测与后续版本稳定引用；只是
+# 判定被置于 `DISABLED_CONFLICT_RULES`，`_is_disabled()` 让谓词恒为 False，因此不会
+# 再产生任何冲突 issue（不阻断、不改写字段、用户表达原样保留）。
+#
+# 停用判据是"该组合能否被证明互斥"，而不是"两个词能否同时出现"：
+#
+#   - `hard_conflict.lighting_environment_source`（室内 × 自然光）：室内有窗、天窗、
+#     采光顶，自然光完全成立 —— **不成立**；
+#   - `hard_conflict.style_medium_mismatch`（写实摄影 × 水彩质感）："摄影质感的水彩"
+#     是真实可实现的混合风格 —— **不成立**；
+#   - `execution_conflict.framing_aspect_mismatch`（远景/宽幅构图 × 方形输出）：构图
+#     词表达的是景别，不是宽高比要求 —— **不成立**；
+#   - `hard_conflict.environment_mode_location`（摄影棚/室内 × 户外地点）：摄影棚可以
+#     搭出海滩布景，"摄影棚 + 海滩"是布景组合而不是逻辑矛盾 —— **不成立**（协调者
+#     2026-09-15 裁定）。
+#
+# 结论：当前**没有任何可确证**的字段冲突规则，`assess().conflicts` 恒为空。停用的是
+# 这四条启发式，不是检测机制本身：谓词与触发词表保留（供未来有证据时重新启用、并
+# 由 `tests/policy/test_policy_conflicts.py` 反向钉住"现在不冲突"）。
+#
+# 停用不是放宽安全不变量：PIN / 来源校验 / 确认绑定 / Revision 校验均不在本模块，
+# 未做任何修改；停用只意味着这些**普通取值组合**不再被关键词启发式阻断。
+
+#: R1-A 停用的冲突规则 id（保留 registry 条目，但判定恒为 False）。
+DISABLED_CONFLICT_RULES: frozenset[str] = frozenset(
+    {
+        "hard_conflict.environment_mode_location",
+        "hard_conflict.lighting_environment_source",
+        "hard_conflict.style_medium_mismatch",
+        "execution_conflict.framing_aspect_mismatch",
+    }
+)
+
+
+def _is_disabled(rule_id: str) -> bool:
+    """规则是否被 R1-A 停用（停用规则的判定恒为 False）。"""
+    return rule_id in DISABLED_CONFLICT_RULES
+
+
+# 停用规则的触发词表（[Rev.2] P2 语言覆盖保留）：只被下面的停用谓词使用，不再影响
+# 任何 `assess` 结果。保留是为了（a）registry 合同与词表可追溯，（b）未来有证据时
+# 重新启用同一口径，而不是重新发明。
 
 _ENCLOSED_ENVIRONMENT_MODES: frozenset[str] = frozenset(
-    {"studio", "indoor", "indoors", "interior"}
+    {
+        "studio",
+        "indoor",
+        "indoors",
+        "interior",
+        # 中文同义：封闭/室内环境模式。
+        "摄影棚环境",
+        "摄影棚",
+        "棚拍",
+        "室内环境",
+        "室内",
+        "室内场景",
+    }
 )
 _OPEN_AIR_LOCATION_TERMS: frozenset[str] = frozenset(
     {
@@ -158,13 +244,70 @@ _OPEN_AIR_LOCATION_TERMS: frozenset[str] = frozenset(
         "sky",
         "park",
         "rooftop",
+        # 中文同义：明确户外地点。
+        "户外",
+        "户外环境",
+        "户外场景",
+        "室外",
+        "海边",
+        "海边沙滩",
+        "沙滩",
+        "海滩",
+        "森林",
+        "树林",
+        "山上",
+        "山顶",
+        "雪山",
+        "草地",
+        "草坪",
+        "公园",
+        "公园草坪",
+        "田野",
+        "沙漠",
+        "沙漠地带",
+        "海洋",
+        "海上",
+        "天空",
+        "街道",
+        "街头",
+        "屋顶",
+        "天台",
     }
 )
 _NATURAL_LIGHT_TERMS: frozenset[str] = frozenset(
-    {"natural light", "natural lighting", "sunlight", "daylight", "golden hour"}
+    {
+        "natural light",
+        "natural lighting",
+        "sunlight",
+        "daylight",
+        "golden hour",
+        # 中文同义：自然光/日光。
+        "自然光",
+        "自然光照明",
+        "自然光线",
+        "自然采光",
+        "日光",
+        "阳光",
+        "阳光照射",
+        "太阳光",
+        "天光",
+        "黄昏的光线",
+    }
 )
 _PHOTO_STYLE_TERMS: frozenset[str] = frozenset(
-    {"photorealistic", "photorealism", "photograph", "photography", "hyperrealistic"}
+    {
+        "photorealistic",
+        "photorealism",
+        "photograph",
+        "photography",
+        "hyperrealistic",
+        # 中文同义：摄影/写实摄影媒介。
+        "写实摄影",
+        "写实摄影风格",
+        "照片写实",
+        "摄影写实",
+        "超写实摄影",
+    }
 )
 _NON_PHOTO_STYLE_TERMS: frozenset[str] = frozenset(
     {
@@ -178,6 +321,29 @@ _NON_PHOTO_STYLE_TERMS: frozenset[str] = frozenset(
         "3d render",
         "pixel art",
         "comic",
+        # 中文同义：非摄影媒介。
+        "动画",
+        "动画风格",
+        "卡通",
+        "卡通风格",
+        "油画",
+        "油画风格",
+        "水彩",
+        "水彩画",
+        "水彩画的质感",
+        "水彩画质感",
+        "水彩质感",
+        "水彩插画",
+        "素描",
+        "铅笔画",
+        "铅笔素描",
+        "三维渲染",
+        "3d渲染",
+        "像素画",
+        "漫画",
+        "漫画风格",
+        "插画",
+        "插画风格",
     }
 )
 _WIDE_FRAMING_TERMS: frozenset[str] = frozenset(
@@ -191,6 +357,15 @@ _WIDE_FRAMING_TERMS: frozenset[str] = frozenset(
         "establishing shot",
         "long shot",
         "full shot",
+        # 中文同义：宽幅/远景构图。
+        "全景",
+        "全景构图",
+        "远景",
+        "远景构图",
+        "广角",
+        "广角构图",
+        "大远景",
+        "宽阔构图",
     }
 )
 
@@ -206,8 +381,25 @@ def _words(text: str | None) -> list[str]:
     return normalized.split()
 
 
+def _has_cjk(text: str) -> bool:
+    """文本是否含 CJK 统一表意文字（用于选择子串匹配口径）。
+
+    中文/日文没有词间空格，`_words` 会把整段文字压成单个 token；对这类文字必须用
+    子串包含判定，否则任何中文词表项都永远匹配不上（P2 的真实失败形态）。
+    """
+    return any("\u3400" <= char <= "\u9fff" for char in text)
+
+
 def _contains_phrase(words: list[str], phrase: str) -> bool:
-    """短语按"连续完整单词序列"匹配，避免 `photo` 误命中 `photograph` 之外的内容。"""
+    """短语匹配，两种口径（由词表项文字脚本决定，语义边界不变）：
+
+    - **空格/ASCII 词序列**：按"连续完整单词序列"匹配，避免 `photo` 误命中
+      `photograph` 之外的内容（v0.2 冻结口径）；
+    - **CJK 短语**：按子串包含匹配（中文无词间空格；`水彩画` ⊂ `画面整体要水彩画
+      的质感`）。只在词表项自身含 CJK 时启用，不影响英文短语语义。
+    """
+    if _has_cjk(phrase):
+        return any(phrase in word for word in words)
     target = phrase.split()
     width = len(target)
     if width == 0 or width > len(words):
@@ -248,7 +440,9 @@ def _aspect_ratio(output_size: str) -> float | None:
 def _environment_mode_location_conflict(
     intent: VisualIntent, execution_context: ExecutionRevision | None
 ) -> bool:
-    """封闭/室内环境模式与明确户外地点互相矛盾。"""
+    """封闭/室内环境模式与明确户外地点：v2 已停用（摄影棚可搭海滩布景）。"""
+    if _is_disabled("hard_conflict.environment_mode_location"):
+        return False
     mode = _read_path(intent, "environment.mode")
     location = _read_path(intent, "environment.location")
     if not isinstance(mode, str) or not isinstance(location, str):
@@ -261,7 +455,9 @@ def _environment_mode_location_conflict(
 def _lighting_environment_source_conflict(
     intent: VisualIntent, execution_context: ExecutionRevision | None
 ) -> bool:
-    """自然光要求与封闭/室内环境模式互相矛盾。"""
+    """自然光要求与封闭/室内环境模式：v2 已停用（室内可以有自然光）。"""
+    if _is_disabled("hard_conflict.lighting_environment_source"):
+        return False
     mode = _read_path(intent, "environment.mode")
     lighting = _read_path(intent, "lighting.character")
     if not isinstance(mode, str) or not isinstance(lighting, str):
@@ -274,7 +470,9 @@ def _lighting_environment_source_conflict(
 def _style_medium_mismatch_conflict(
     intent: VisualIntent, execution_context: ExecutionRevision | None
 ) -> bool:
-    """风格主值（写实摄影）与风格补充说明（非摄影媒介）互相矛盾。"""
+    """风格主值与风格补充说明：v2 已停用（摄影与水彩质感可混合）。"""
+    if _is_disabled("hard_conflict.style_medium_mismatch"):
+        return False
     primary = _read_path(intent, "style.primary")
     description = _read_path(intent, "style.description")
     if not isinstance(primary, str) or not isinstance(description, str):
@@ -287,7 +485,9 @@ def _style_medium_mismatch_conflict(
 def _framing_aspect_mismatch_conflict(
     intent: VisualIntent, execution_context: ExecutionRevision | None
 ) -> bool:
-    """宽幅构图要求与执行侧输出比例（<w>x<h>）互相矛盾。"""
+    """宽幅构图要求与执行侧输出比例：v2 已停用（构图词不等于宽高比要求）。"""
+    if _is_disabled("execution_conflict.framing_aspect_mismatch"):
+        return False
     if execution_context is None:
         return False
     framing = _read_path(intent, "composition.framing")
@@ -320,6 +520,9 @@ class _ConflictRule:
 
 
 #: 稳定 rule id -> 冲突规则。`kind` 决定 code 前缀（hard / execution）。
+#: v2（R1-A）：四条条目全部保留（registry 合同），但判定恒为 False（见
+#: `DISABLED_CONFLICT_RULES`）；`kind` / `path` / `message` 元数据不变，供评测与
+#: 后续版本稳定引用。
 CONFLICT_RULES: dict[str, _ConflictRule] = {
     "hard_conflict.environment_mode_location": _ConflictRule(
         rule_id="hard_conflict.environment_mode_location",
@@ -365,8 +568,10 @@ CONFLICT_RULES: dict[str, _ConflictRule] = {
 
 
 # ---------------------------------------------------------------------------
-# DecisionPolicy v1 规则表（恰好 9 条，数据驱动）
+# DecisionPolicy v2 规则表（恰好 9 条，数据驱动）
 # ---------------------------------------------------------------------------
+# v2（R1-A）：`conflict_rules` 的声明与 v1 逐条相同（registry 合同保留），但四条规则
+# 的判定已在 `DISABLED_CONFLICT_RULES` 中停用，`assess().conflicts` 恒为空。
 
 DECISION_POLICIES: tuple[DecisionPolicy, ...] = (
     DecisionPolicy(

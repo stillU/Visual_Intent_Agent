@@ -1,0 +1,22 @@
+{
+  "manifest_version": "frozen_manifest_v0_3_r1",
+  "dataset_version": "core_v0_3_r1",
+  "protocol_version": "gate_a_protocol_v0_3_r1",
+  "config_version": "gate_a_v0_3_r1",
+  "algorithm": "sha256",
+  "frozen_by": "MVP v0.3 更改书 001 R1-B / 002 工包 C（r1 评测最小修订）",
+  "parent_manifest": "frozen_manifest_v0_3",
+  "rule": "r1 评测口径的冻结物；任何修改必须生成新版本文件与新清单，不得覆盖。旧 core_v0_3 文件与旧清单只读保留，旧测试继续验证旧文件。",
+  "roles": {
+    "protocol": "evaluation/protocol_v0_3_r1.md",
+    "config": "evaluation/configs/gate_a_v0_3_r1.json",
+    "dataset": "evaluation/fixtures/core_v0_3_r1.jsonl",
+    "annotations": "evaluation/annotations/core_v0_3_r1.jsonl"
+  },
+  "files": {
+    "evaluation/protocol_v0_3_r1.md": "dcfe6b95c6f2806fec07e830bd3f8af2557573b2c1f18453321229548df15066",
+    "evaluation/configs/gate_a_v0_3_r1.json": "2733486c9169cf6b5bf1512f1ac74f00f860a3a1445fbacf9f05a715b290fc5d",
+    "evaluation/fixtures/core_v0_3_r1.jsonl": "3e1db943b96b40140d2a4d86b966bdfc27daaa48865a683dd3b05d35e7e4b7c6",
+    "evaluation/annotations/core_v0_3_r1.jsonl": "a5bd3206bc39cba19508b8a3ca4526b66e8abbb18aaa92e83cb906bbb265d648"
+  }
+}

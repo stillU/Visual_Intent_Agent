@@ -12,7 +12,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from visual_intent_agent.domain import IntentDelta, VisualIntent
+from visual_intent_agent.domain import ExecutionRevision, IntentDelta, VisualIntent
 from visual_intent_agent.intent_engine import (
     IntentEngine,
     Interpreter,
@@ -172,3 +172,14 @@ def issue_codes(resolution: IntentResolution) -> list[str]:
 
 def delta_paths(deltas: list[IntentDelta]) -> list[str]:
     return [delta.path for delta in deltas]
+
+
+def execution(output_size: str = "1024x1024") -> ExecutionRevision:
+    """确定性 ExecutionRevision（Step 06 起随 `IntentResolveRequest` 进入 `assess`）。"""
+    return ExecutionRevision(
+        execution_revision_id="erev_ie_test",
+        session_id="ses_ie_test",
+        parent_revision_id=None,
+        target_model="qwen-image-3.0",
+        output_size=output_size,
+    )

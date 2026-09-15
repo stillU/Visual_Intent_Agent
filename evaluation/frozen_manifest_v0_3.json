@@ -1,0 +1,14 @@
+{
+  "manifest_version": "frozen_manifest_v0_3",
+  "dataset_version": "core_v0_3",
+  "protocol_version": "gate_a_protocol_v0_3",
+  "algorithm": "sha256",
+  "frozen_by": "MVP v0.3 Step 01（评测协议与数据集冻结）",
+  "rule": "本清单所列文件为 Gate A 唯一评测口径的冻结物；任何修改必须生成新版本文件与新清单，不得覆盖。哈希同时固化在 tests/evaluation/test_dataset_contract.py，内容变化会被默认测试捕获。",
+  "files": {
+    "evaluation/protocol.md": "70cc0b3c4bde970a91172191b398cf3869df539fa0971ae85cfd849c52c26d93",
+    "evaluation/fixtures/core_v0_3.jsonl": "0519534702225949bede2782516cd1543c936d2fd298834ad36dd253fc63a64b",
+    "evaluation/annotations/core_v0_3.jsonl": "d1712aab45c42251d920d22f6a5a6a1fe5bef964f577e2b45aead851dc6a6b57",
+    "evaluation/configs/gate_a_v0_3.json": "3b6159f8bc620f6c31fc85fb40a937a7ced1a71296a8c6ab9d0514c0f329905b"
+  }
+}

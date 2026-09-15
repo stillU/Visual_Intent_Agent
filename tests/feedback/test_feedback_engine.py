@@ -330,7 +330,11 @@ def test_user_prompt_contains_the_generation_binding_and_the_feedback_text(tmp_p
     request = load_feedback_request(session, feedback_text="make the framing wider")
     prompt = build_feedback_user_prompt(request)
 
-    assert FEEDBACK_PROMPT_VERSION == "feedback.v1"
+    # Step 06 · P1/P5：系统提示词新增两条边界约束 → 版本号提升到 feedback.v2；
+    # Step 06 patch 002：保语义精简（边界关键句逐字保留）→ feedback.v3
+    # （修订理由见 evaluation/reports/fix_traceability.md patch 002 章节）；
+    # 更改书 002 工包 B：补 COUNTING/LOCATIVE 两条 R1-A 语义边界 → feedback.v4。
+    assert FEEDBACK_PROMPT_VERSION == "feedback.v4"
     assert f"generation_id: {session.generation.generation_id}" in prompt
     assert f"prompt_artifact_id: {session.generation.prompt_artifact_id}" in prompt
     assert "ALLOWED PATHS" in prompt

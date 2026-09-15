@@ -1,5 +1,7 @@
 # MVP v0.3 Agent 派发提示词
 
+Step 06 patch 002 后使用 [更改书 002](REVISION_002_BUILD_FIRST.md) 的 A/B/C/D 文件级并行分工，具体修订依据见 [更改书 001](REVISION_001_SHORTEST_PATH.md)。优先实现、不运行真实付费评测；每个工包落地代码、局部离线测试和遗留清单。CLI 先交付工程预览版，不宣称 Gate Go。以下为历史提示词，与 002 冲突时以 002 为准。
+
 ## 通用要求
 
 ```text
