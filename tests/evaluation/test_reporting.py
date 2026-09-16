@@ -52,7 +52,7 @@ def _run_record() -> EvalRunRecord:
 
     return EvalRunRecord(
         run_id="erun_test",
-        harness_version="evaluation_harness_v1",
+        harness_version="evaluation_harness_v2",
         id_scheme_version="eval_ids_sha256_v1",
         code_version="test",
         protocol_version="gate_a_protocol_v0_3",

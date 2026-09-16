@@ -2019,11 +2019,12 @@ class EvaluationRunner:
                         ).forbidden_change_paths
                     )
                 ),
-                # r1：应生成标志由 expected_outcome 派生；blocked 轮是首次根因的
-                # 级联结果，不作为独立“应生成而失败”重复计数（R1-B #3/#4）。
+                # r1：应生成标志始终由冻结标注的 expected_outcome 派生，blocked 也不
+                # 改成 None —— 阻断轮只是没有执行，它仍是“预定生成而未产出”的目标，
+                # 必须留在完成率分母（根因去重不得缩减分母，F2）。旧 v1 分支保持 None。
                 expected_prompt=(
                     None
-                    if (not r1 or t.status == "blocked")
+                    if not r1
                     else (
                         (annotation.turn_annotation(t.turn_id) or TurnAnnotation(turn_id=t.turn_id)).expected_outcome
                         == "ready_and_generate"

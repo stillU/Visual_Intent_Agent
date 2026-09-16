@@ -65,6 +65,7 @@ from visual_intent_agent.persistence import (
 )
 from visual_intent_agent.prompt_engine import (
     QWEN_IMAGE_MODEL,
+    PromptArtifact,
     PromptCompilationError,
     PromptEngine,
     QwenImageRenderer,
@@ -88,10 +89,26 @@ from visual_intent_agent.workflow.review import (
     ReviewService,
 )
 
-__all__ = ["SessionApp", "SystemConsole", "main", "run_repl", "build_demo_app", "build_app"]
+__all__ = [
+    "SessionApp",
+    "SystemConsole",
+    "main",
+    "run_repl",
+    "build_demo_app",
+    "build_app",
+    "RETRY_READY",
+    "RETRY_NO_PROMPT",
+    "RETRY_PROMPT_EXPIRED",
+]
 
 #: 预览版标识（正式版本状态见 docs/releases/；本轮不声称正式发布）。
 CLI_VERSION = "visual-intent-agent MVP v0.3 engineering preview (not a formal release)"
+
+#: FAILED 重试的**只读预检查**结果（不是授权；底层 `GenerationPipeline.retry` 仍是唯一门禁）：
+#: 无已落库 Prompt / 历史 Prompt 绑定的确认已失效 / 可以复用同一 Prompt。
+RETRY_READY = "ready"
+RETRY_NO_PROMPT = "no_prompt"
+RETRY_PROMPT_EXPIRED = "prompt_expired"
 
 #: 用户显式确认词（必须整词匹配；任何其他输入都当作修改消息或退出）。
 CONFIRM_TOKENS: frozenset[str] = frozenset(
@@ -317,13 +334,35 @@ class SessionApp:
         return self._pipeline.retry(session_id)
 
     def can_retry_generation(self, session_id: str) -> bool:
-        """FAILED 重试是否可行：本会话必须已有**已落库** PromptArtifact。
+        """FAILED 重试是否可行：最新已落库 PromptArtifact 存在**且其确认仍有效**。
 
-        编译失败等情况下没有可复用的 Prompt，`retry` 只会得到
-        `generation.artifact_not_found`；界面据此如实提示"只能 exit / 新建会话"，
-        而不是暗示当前 FAILED 可以直接重新确认。
+        只检查"本会话最新已落库 PromptArtifact"这一条：修改 Intent 后第二次生成失败时，
+        历史 `GenerationArtifact` 属于上一版，不能据此判断；编译失败等情况没有可复用
+        Prompt，`retry` 只会得到 `generation.artifact_not_found`。
+
+        这里**不复制**确认判定规则：一律调用 `Repository.is_confirmation_valid(...)`。
+        预检查与真正 `retry` 之间状态可能变化，届时仍由底层
+        `GenerationPipeline.retry` 按同一门禁拒绝（预检查不是授权）。
         """
-        return self._repo.get_latest_prompt_artifact(session_id) is not None
+        return self.retry_status(session_id) == RETRY_READY
+
+    def retry_status(self, session_id: str) -> str:
+        """FAILED 重试的只读预检查结果（`RETRY_READY` / `RETRY_NO_PROMPT` / `RETRY_PROMPT_EXPIRED`）。
+
+        - 无已落库 PromptArtifact（编译失败 / 从未编译）→ `RETRY_NO_PROMPT`；
+        - 存在但 payload 的 `based_on_confirmation_id` 按 Repository 判定已失效
+          （例如修改 Intent 后旧确认天然失效）→ `RETRY_PROMPT_EXPIRED`；
+        - 否则 `RETRY_READY`。
+
+        只读、不写状态、不自动重新确认 / 重新 compile；仅用于给出准确提示。
+        """
+        stored = self._repo.get_latest_prompt_artifact(session_id)
+        if stored is None:
+            return RETRY_NO_PROMPT
+        artifact = PromptArtifact.model_validate_json(stored.payload)
+        if not self._repo.is_confirmation_valid(artifact.based_on_confirmation_id):
+            return RETRY_PROMPT_EXPIRED
+        return RETRY_READY
 
     def close(self) -> None:
         close = getattr(self._repo, "close", None)
@@ -462,7 +501,8 @@ def _error_hint(exc: BaseException) -> str | None:
     ):
         return (
             "Prompt 编译失败，本次没有生成新的 Prompt；"
-            "若本会话没有已落库 Prompt 则无法 retry，只能 exit 后新建会话。"
+            "本会话若没有可复用的已落库 Prompt、或其绑定确认已失效，都无法 retry，"
+            "只能 exit 后新建会话。"
         )
     if isinstance(exc, ProviderError):
         if exc.retryable:
@@ -655,13 +695,20 @@ def run_repl(app: SessionApp, console: Console) -> int:
 
         if state is WorkflowState.FAILED:
             console.print("")
-            if not app.can_retry_generation(session_id):
-                # 没有已落库 Prompt（如编译失败/从未编译）：当前 FAILED 无法重试，
-                # 也不能直接重新确认；如实提示只能退出后新建会话。
-                console.print(
-                    "上次生成失败（FAILED），且本会话没有可复用的已落库 Prompt"
-                    "（编译失败或从未编译）。"
-                )
+            status = app.retry_status(session_id)
+            if status != RETRY_READY:
+                # 两种情况分别如实说明：从未编译出 Prompt vs 历史 Prompt 绑定的确认已失效。
+                # 都不能直接重新确认，也不能把"已过期"错误描述成"从未编译"。
+                if status == RETRY_PROMPT_EXPIRED:
+                    console.print(
+                        "上次生成失败（FAILED），且本会话最新已落库 Prompt 绑定的确认已失效"
+                        "（历史 Prompt 已过期）。"
+                    )
+                else:
+                    console.print(
+                        "上次生成失败（FAILED），且本会话没有可复用的已落库 Prompt"
+                        "（编译失败或从未编译）。"
+                    )
                 console.print("当前 FAILED 无法 retry，也不能直接重新确认；只能输入 exit 后新建会话。")
                 text = console.prompt("输入 exit 退出: ")
                 if _norm(text) in EXIT_TOKENS:

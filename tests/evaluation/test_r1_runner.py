@@ -26,7 +26,11 @@ from evaluation.identity import (
     CodeIdentity,
     IdentityError,
 )
-from evaluation.reporting import METRIC_VERSION_R1, METRIC_VERSION_V1
+from evaluation.reporting import (
+    EVALUATION_HARNESS_VERSION,
+    METRIC_VERSION_R1,
+    METRIC_VERSION_V1,
+)
 from evaluation.runner import (
     PROTOCOL_VERSION_R1,
     EvaluationRunner,
@@ -46,6 +50,7 @@ from evaluation_harness_helpers import (
     make_settings,
     make_turn,
     make_turn_annotation,
+    revise_entry,
     write_config,
     write_jsonl,
 )
@@ -198,6 +203,127 @@ def _blocked_cascade_case() -> tuple[list[dict], list[dict]]:
     return [case], [anno]
 
 
+def _preservation_baseline_case() -> tuple[list[dict], list[dict]]:
+    """F1 Runner 集成：真实标注驱动初始 SET + 保留标签，复现基准污染缺陷。
+
+    t1 首次生成同时 SET 主体/风格（即初始 changed_paths）；t2 只合法改光，标注
+    要求保留主体与风格，但实际生成把 cat 换成 dog。修复前 t1 的初始路径一直留在
+    pending，t2 的保留组被全部排除 → preservation `not_applicable`；修复后应得到
+    一个比较对、保留一组、丢失一组、得分 0.5。
+    """
+    case = make_fixture_case(
+        "sx-r1-preserve-001",
+        [
+            make_turn("t1", "user_message", "一只橘猫，水彩风格，中景"),
+            make_turn("t2", "image_feedback", "只把光线改成暖光"),
+            make_turn("t3", "accept", "可以了"),
+        ],
+        scenario="single_field_modification",
+        turn_type="multi",
+    )
+    anno = make_annotation(
+        "sx-r1-preserve-001",
+        [
+            make_turn_annotation(
+                "t1",
+                expected_deltas=[
+                    {
+                        "operation": "SET",
+                        "path": "subject.description",
+                        "value_match": {"mode": "contains_any", "keywords": ["猫", "cat"]},
+                        "resolution": None,
+                    },
+                    {
+                        "operation": "SET",
+                        "path": "style.primary",
+                        "value_match": {
+                            "mode": "contains_any",
+                            "keywords": ["水彩", "watercolor"],
+                        },
+                        "resolution": None,
+                    },
+                ],
+                expected_outcome="ready_and_generate",
+            ),
+            make_turn_annotation(
+                "t2",
+                expected_deltas=[
+                    {
+                        "operation": "SET",
+                        "path": "lighting.character",
+                        "value_match": {"mode": "contains_any", "keywords": ["暖", "warm"]},
+                        "resolution": None,
+                    }
+                ],
+                expected_outcome="ready_and_generate",
+                expected_feedback_decision="revise",
+                forbidden_change_paths=["subject.description", "style.primary"],
+                preserve_path_groups={
+                    "subject.description": [["猫", "cat"]],
+                    "style.primary": [["水彩", "watercolor"]],
+                },
+            ),
+            make_turn_annotation("t3", expected_outcome="accepted_completed"),
+        ],
+        scenario="single_field_modification",
+    )
+    return [case], [anno]
+
+
+def _success_failure_blocked_case() -> tuple[list[dict], list[dict]]:
+    """F2：三轮预定生成——成功、失败、blocked，完成率必须是 1/3 而非 1/2。
+
+    t1 正常生成；t2 预定生成但此刻会话已在 WAITING_REVIEW（新消息被工作流拒绝）
+    → 首次独立根因；t3 无法执行 → blocked。
+    """
+    case = make_fixture_case(
+        "sx-r1-completion-001",
+        [
+            make_turn("t1", "user_message", "一只橘猫蜷在沙发上，写实，中景，暖光"),
+            make_turn("t2", "user_message", "再把光线改成戏剧光"),
+            make_turn("t3", "user_message", "再换成水彩风格"),
+        ],
+        scenario="single_field_modification",
+        turn_type="multi",
+    )
+    anno = make_annotation(
+        "sx-r1-completion-001",
+        [
+            make_turn_annotation("t1", expected_outcome="ready_and_generate"),
+            make_turn_annotation("t2", expected_outcome="ready_and_generate"),
+            make_turn_annotation("t3", expected_outcome="ready_and_generate"),
+        ],
+        scenario="single_field_modification",
+    )
+    return [case], [anno]
+
+
+def _clarification_failure_then_blocked_case() -> tuple[list[dict], list[dict]]:
+    """F2：首轮预定澄清但引擎失败；后续预定生成轮 blocked。
+
+    分母只剩 t2（ready_and_generate）→ 完成率 0；不得因为没有未阻断的预定生成轮
+    而报 `not_applicable`（那样会让级联阻断整段消失）。
+    """
+    case = make_fixture_case(
+        "sx-r1-completion-002",
+        [
+            make_turn("t1", "user_message", "帮我随便画一张"),
+            make_turn("t2", "user_message", "一只橘猫蜷在沙发上，写实，中景，暖光"),
+        ],
+        scenario="missing_core_decision",
+        turn_type="multi",
+    )
+    anno = make_annotation(
+        "sx-r1-completion-002",
+        [
+            make_turn_annotation("t1", expected_outcome="clarification_expected"),
+            make_turn_annotation("t2", expected_outcome="ready_and_generate"),
+        ],
+        scenario="missing_core_decision",
+    )
+    return [case], [anno]
+
+
 # ---------------------------------------------------------------------------
 # 指标版本与 r1 指标
 # ---------------------------------------------------------------------------
@@ -247,6 +373,72 @@ class TestR1RunRecording:
         assert result.run.metric_version == METRIC_VERSION_V1
         l3_names = {record.metric for record in result.metrics if record.layer == "L3"}
         assert "generation_completion" not in l3_names
+
+    def test_harness_version_marks_post_v0_3_scoring_fix(self, tmp_path: Path) -> None:
+        """F1/F2 改变评分实现：Run 必须记录 harness v2，使修复前后 Run 可区分。
+
+        指标口径版本仍是 r1（`v0_3_r1`），此处只升级框架实现版本；默认
+        `code_version` 与 Run ID 均由该常量派生，故修复前后不共享同一身份。
+        """
+        assert EVALUATION_HARNESS_VERSION == "evaluation_harness_v2"
+        cases, annos = _single_turn_case()
+        runner = _r1_runner(
+            tmp_path / "harness-version",
+            cases,
+            annos,
+            llm_factory=make_llm_factory(
+                baseline=[BASELINE_PROMPT_TEXT],
+                interpreter=[FULL_INTENT_RESPONSE],
+            ),
+        )
+        result = runner.run()
+        assert result.run.harness_version == EVALUATION_HARNESS_VERSION
+        assert result.run.code_version.endswith(f"+{EVALUATION_HARNESS_VERSION}")
+        assert result.run.metric_version == METRIC_VERSION_R1
+
+
+class TestPreservationBaselineIntegration:
+    """F1：用 Runner 真实标注（含首轮初始 SET）端到端验证 Preservation 基准。"""
+
+    def test_initial_set_does_not_pollute_next_comparison(self, tmp_path: Path) -> None:
+        cases, annos = _preservation_baseline_case()
+        runner = _r1_runner(
+            tmp_path / "preserve",
+            cases,
+            annos,
+            llm_factory=make_llm_factory(
+                baseline=[
+                    "写实摄影：一只橘色虎斑猫，水彩，中景 medium shot",
+                    "写实摄影：一只狗，水彩，中景 medium shot，暖光 warm",
+                ],
+                interpreter=[FULL_INTENT_RESPONSE],
+                feedback=[
+                    feedback_response(
+                        "revise",
+                        candidate_deltas=[revise_entry("lighting.character", "warm")],
+                    )
+                ],
+            ),
+        )
+        result = runner.run()
+        baseline_metrics = {
+            m.metric: m
+            for m in result.metrics
+            if m.system == "baseline_a" and m.repetition == 1
+        }
+        preservation = baseline_metrics["preservation"]
+        # 首轮初始 SET（subject/style）不得被当作 t2 的“合法修改”排除。
+        assert preservation.status == "ok"
+        assert preservation.counts["pairs"] == 1
+        assert preservation.score == 0.5
+        assert preservation.counts["groups_kept"] == 1
+        assert preservation.counts["groups_lost"] == 1
+        pair = preservation.details["pair_details"][0]
+        assert pair["previous_turn_id"] == "t1"
+        assert pair["turn_id"] == "t2"
+        assert pair["excluded_changed_paths"] == ["lighting.character"]
+        # 终局 accept 轮无 Prompt：只计数 not_applicable，不伪造保留 0。
+        assert preservation.counts["no_prompt_not_applicable"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +518,212 @@ class TestBlockedCascade:
         case_record = next(c for c in result.cases if c.system == "system_b")
         assert case_record.status == "failed"
         assert sum(1 for t in result.turns if t.status == "failed" and t.system == "system_b") == 1
+
+
+# ---------------------------------------------------------------------------
+# F2：级联阻断轮仍进完成率分母
+# ---------------------------------------------------------------------------
+
+
+class TestCascadeCompletionDenominator:
+    """F2：`ready_and_generate` 轮无论是否 blocked 都进分母；根因与级联分开统计。"""
+
+    @staticmethod
+    def _completion(result, system: str):
+        return next(
+            m
+            for m in result.metrics
+            if m.system == system
+            and m.metric == "generation_completion"
+            and m.repetition == 1
+        )
+
+    def test_two_expected_turns_first_failed_second_blocked(self, tmp_path: Path) -> None:
+        cases, annos = _blocked_cascade_case()
+        runner = _r1_runner(
+            tmp_path / "cascade-denominator",
+            cases,
+            annos,
+            llm_factory=make_llm_factory(
+                baseline=[BASELINE_PROMPT_TEXT] * 3,
+                interpreter=[FULL_INTENT_RESPONSE],
+                feedback=[feedback_response("revise")],
+            ),
+        )
+        result = runner.run()
+        completion = self._completion(result, "system_b")
+        # 级联阻断不缩减分母：t1、t2 都是预定生成目标，均未产出 Prompt。
+        assert completion.status == "ok"
+        assert completion.counts == {
+            "expected_prompt_turns": 2,
+            "produced": 0,
+            "failed": 2,
+        }
+        assert completion.score == 0.0
+        assert completion.details["failed_turn_ids"] == ["t1", "t2"]
+
+        sb_turns = sorted(
+            (t for t in result.turns if t.system == "system_b"),
+            key=lambda t: t.turn_index,
+        )
+        root_causes = [t for t in sb_turns if t.status == "failed"]
+        cascade = [t for t in sb_turns if t.status == "blocked"]
+        # 一个独立故障根因；级联阻断不伪造异常、不执行调用。
+        assert [t.turn_id for t in root_causes] == ["t1"]
+        assert root_causes[0].error is not None
+        assert {t.blocked_by_turn_id for t in cascade} == {"t1"}
+        for turn in cascade:
+            assert turn.blocked_by_prior_failure is True
+            assert turn.error is None
+            assert turn.input_source == "not_executed"
+            assert turn.llm_calls == []
+            assert turn.image_calls == []
+        # 逐轮记录可把完成率里的未完成轮拆成根因失败与级联阻断，无需新计数。
+        # t3 是 blocked 的 accept 轮：不进分母，也不出现在 failed_turn_ids。
+        blocked_expected = [
+            t for t in cascade if t.expected_outcome == "ready_and_generate"
+        ]
+        blocked_not_expected = [
+            t for t in cascade if t.expected_outcome != "ready_and_generate"
+        ]
+        assert [t.turn_id for t in blocked_not_expected] == ["t3"]
+        assert completion.details["failed_turn_ids"] == [
+            *[t.turn_id for t in root_causes],
+            *[t.turn_id for t in blocked_expected],
+        ]
+
+    def test_three_expected_turns_success_failure_blocked_is_one_third(
+        self, tmp_path: Path
+    ) -> None:
+        cases, annos = _success_failure_blocked_case()
+        runner = _r1_runner(
+            tmp_path / "completion-third",
+            cases,
+            annos,
+            llm_factory=make_llm_factory(
+                baseline=[BASELINE_PROMPT_TEXT],
+                interpreter=[FULL_INTENT_RESPONSE],
+            ),
+        )
+        result = runner.run()
+        completion = self._completion(result, "system_b")
+        assert completion.status == "ok"
+        assert completion.counts == {
+            "expected_prompt_turns": 3,
+            "produced": 1,
+            "failed": 2,
+        }
+        assert completion.score == pytest.approx(1 / 3)
+        assert completion.details["failed_turn_ids"] == ["t2", "t3"]
+
+        sb_turns = sorted(
+            (t for t in result.turns if t.system == "system_b"),
+            key=lambda t: t.turn_index,
+        )
+        assert [t.status for t in sb_turns] == ["completed", "failed", "blocked"]
+        assert [t.prompt_text is not None for t in sb_turns] == [True, False, False]
+        assert sum(1 for t in sb_turns if t.status == "failed") == 1
+
+    def test_clarification_failure_then_blocked_is_zero_not_not_applicable(
+        self, tmp_path: Path
+    ) -> None:
+        cases, annos = _clarification_failure_then_blocked_case()
+        runner = _r1_runner(
+            tmp_path / "clarify-then-blocked",
+            cases,
+            annos,
+            # 引擎脚本为空：t1 预定澄清却可恢复失败 → 首次独立根因。
+            llm_factory=make_llm_factory(),
+        )
+        result = runner.run()
+        completion = self._completion(result, "system_b")
+        # 只有 t2 是预定生成轮（blocked）；分母不为空，完成率是 0 而非 not_applicable。
+        assert completion.status == "ok"
+        assert completion.counts == {
+            "expected_prompt_turns": 1,
+            "produced": 0,
+            "failed": 1,
+        }
+        assert completion.score == 0.0
+        assert completion.details["failed_turn_ids"] == ["t2"]
+
+        sb_turns = sorted(
+            (t for t in result.turns if t.system == "system_b"),
+            key=lambda t: t.turn_index,
+        )
+        assert [t.status for t in sb_turns] == ["failed", "blocked"]
+        # t1 是预定澄清轮：即使失败也不冒充“应生成而失败”。
+        assert sb_turns[0].expected_outcome == "clarification_expected"
+        assert sb_turns[1].blocked_by_turn_id == "t1"
+
+    def test_clarification_and_accept_excluded_and_ab_share_denominator(
+        self, tmp_path: Path
+    ) -> None:
+        """A/B 同口径：只有 ready_and_generate 进分母，澄清/接受均排除。"""
+        cases, annos = _preservation_baseline_case()
+        runner = _r1_runner(
+            tmp_path / "ab-denominator",
+            cases,
+            annos,
+            llm_factory=make_llm_factory(
+                baseline=[
+                    "写实摄影：一只橘色虎斑猫，水彩，中景 medium shot",
+                    "写实摄影：一只狗，水彩，中景 medium shot，暖光 warm",
+                ],
+                interpreter=[FULL_INTENT_RESPONSE],
+                feedback=[
+                    feedback_response(
+                        "revise",
+                        candidate_deltas=[revise_entry("lighting.character", "warm")],
+                    )
+                ],
+            ),
+        )
+        result = runner.run()
+        baseline_a = self._completion(result, "baseline_a")
+        system_b = self._completion(result, "system_b")
+        # t1/t2 是 ready_and_generate；t3 是 accept（accepted_completed）不进分母。
+        for completion in (baseline_a, system_b):
+            assert completion.status == "ok"
+            assert completion.counts["expected_prompt_turns"] == 2
+            assert completion.counts["produced"] == 2
+            assert completion.counts["failed"] == 0
+            assert completion.details["failed_turn_ids"] == []
+            assert completion.score == 1.0
+
+    def test_legacy_v1_run_unchanged_for_blocked_cascade(self, tmp_path: Path) -> None:
+        """旧 v1 口径不新增完成率，也不改写 blocked 记录（F2 只动 r1 派生）。"""
+        cases, annos = _blocked_cascade_case()
+        dataset, annos_path, config, protocol = _write_inputs(
+            tmp_path / "legacy-cascade", cases, annos
+        )
+        runner = EvaluationRunner(
+            settings=make_settings(),
+            llm_factory=make_llm_factory(
+                baseline=[BASELINE_PROMPT_TEXT] * 3,
+                interpreter=[FULL_INTENT_RESPONSE],
+                feedback=[feedback_response("revise")],
+            ),
+            image_factory=lambda: FakeImageProvider(),
+            output_root=tmp_path / "legacy-cascade" / "runs",
+            config_path=config,
+            dataset_path=dataset,
+            annotations_path=annos_path,
+            protocol_path=protocol,
+            repetitions=1,
+            verify_frozen=False,
+            clock=fixed_clock(),
+            monotonic=fixed_monotonic(),
+        )
+        result = runner.run()
+        assert result.run.metric_version == METRIC_VERSION_V1
+        l3_names = {record.metric for record in result.metrics if record.layer == "L3"}
+        assert "generation_completion" not in l3_names
+        sb_turns = sorted(
+            (t for t in result.turns if t.system == "system_b"),
+            key=lambda t: t.turn_index,
+        )
+        assert [t.status for t in sb_turns] == ["failed", "blocked", "blocked"]
 
 
 # ---------------------------------------------------------------------------

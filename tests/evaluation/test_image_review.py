@@ -400,7 +400,7 @@ def build_offline_env(tmp_path: Path, specs: list[dict] | None = None) -> Simple
 
     run = EvalRunRecord(
         run_id=RUN_ID,
-        harness_version="evaluation_harness_v1",
+        harness_version="evaluation_harness_v2",
         id_scheme_version="eval_ids_sha256_v1",
         code_version="synthetic",
         run_nonce="synth",

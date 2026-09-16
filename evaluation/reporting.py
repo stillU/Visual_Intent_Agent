@@ -50,7 +50,10 @@ EVAL_RECORDS_SCHEMA_VERSION = "eval_records_v1"
 EvalRecordsSchemaVersion = Literal["eval_records_v1"]
 
 #: 评测框架实现版本（实现变更时递增；写入 Run 记录）。
-EVALUATION_HARNESS_VERSION = "evaluation_harness_v1"
+#: v2 = v0.3 后置修复批次（F1 Preservation 比较基准清空时机、F2 级联阻断轮完成率
+#: 分母）改变评分实现：修复前后的 Run 以本标识区分，不得跨版本直接比较结论。
+#: 指标口径版本 `METRIC_VERSION_R1` 与协议冻结版本不因本修复改动。
+EVALUATION_HARNESS_VERSION = "evaluation_harness_v2"
 
 #: 参评系统标识（协议第 1 节）。
 SystemId = Literal["baseline_a", "system_b"]

@@ -21,6 +21,7 @@ from pydantic import SecretStr
 
 from visual_intent_agent.cli import SessionApp
 from visual_intent_agent.config import Settings
+from visual_intent_agent.domain import ExecutionRevision, new_id
 from visual_intent_agent.feedback import FeedbackEngine
 from visual_intent_agent.generation import GenerationPipeline
 from visual_intent_agent.intent_engine import IntentEngine, Interpreter
@@ -34,7 +35,7 @@ from visual_intent_agent.prompt_engine import (
 from visual_intent_agent.providers.errors import ProviderError
 from visual_intent_agent.providers.fake_image import FakeImageProvider
 from visual_intent_agent.providers.llm import LLMRequest, LLMResponse
-from visual_intent_agent.workflow import QuestionBuilder, WorkflowService
+from visual_intent_agent.workflow import DEFAULT_OUTPUT_SIZE, QuestionBuilder, WorkflowService
 from visual_intent_agent.workflow.review import ReviewService
 
 #: 伪造 Provider 配置（不是真实凭据；测试绝不读取项目 .env）。
@@ -306,6 +307,26 @@ def single_session_id(repo: SQLiteRepository) -> str:
     return str(row[0])
 
 
+def append_execution_revision_with_model(
+    repo: SQLiteRepository, session_id: str, target_model: str
+) -> ExecutionRevision:
+    """直接落一条新 `ExecutionRevision`（模拟会话中途执行上下文变化，例如切换目标模型）。
+
+    只增不改、必须接在当前 head 之后；离线构造"第二轮编译失败"（唯一 Renderer 不支持
+    新目标模型）时使用，不接触任何真实 Provider，也不改变状态机。
+    """
+    snapshot = repo.get_current_session_snapshot(session_id)
+    revision = ExecutionRevision(
+        execution_revision_id=new_id("erev"),
+        session_id=session_id,
+        parent_revision_id=snapshot.current_execution_revision_id,
+        target_model=target_model,
+        output_size=DEFAULT_OUTPUT_SIZE,
+    )
+    repo.append_execution_revision(revision)
+    return revision
+
+
 __all__ = [
     "FAKE_BASE_URL",
     "FAKE_API_KEY",
@@ -328,4 +349,5 @@ __all__ = [
     "prompt_artifacts",
     "current_intent_value",
     "single_session_id",
+    "append_execution_revision_with_model",
 ]

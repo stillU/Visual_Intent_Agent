@@ -59,8 +59,9 @@ class PromptSequenceTurn(BaseModel):
     expected_prompt: bool | None = None
     preserve_path_groups: dict[str, list[list[str]]] = Field(default_factory=dict)
     #: R1-B #2：本轮**合法改变**的路径（来自标注 expected_deltas 的 SET/CLEAR）。
-    #: 跨无 Prompt 轮累计；下一个有效相邻 Prompt 对在比较前排除这些路径后清空，
-    #: 使“用户合法改掉的旧值”不依赖“关键词恰好在前轮不命中”来碰巧跳过。
+    #: 自上一个有效 Prompt 起（含本轮）累计；每个有效 Prompt 成为新基准时无条件
+    #: 清空，使“用户合法改掉的旧值”不依赖“关键词恰好在前轮不命中”来碰巧跳过，
+    #: 也避免首个 Prompt 之前的初始 SET 污染下一次比较。
     changed_paths: list[str] = Field(default_factory=list)
 
 
@@ -317,9 +318,10 @@ def evaluate_preservation_r1(prompt_sequence: list[PromptSequenceTurn]) -> Metri
     与 v1 的差异（R1-B #2/#3）：
 
     - 保留单元按**路径关联**（`preserve_path_groups`），用户显式改掉的路径不参与；
-    - **跨无 Prompt 轮累计合法改变路径**（`changed_paths`，来自 SET/CLEAR）：下一个
-      有效相邻 Prompt 对在比较前排除这些路径，随后清空；不依赖“最新关键词恰好在前轮
-      不命中”来碰巧跳过；
+    - **跨无 Prompt 轮累计合法改变路径**（`changed_paths`，来自 SET/CLEAR）：只累计
+      上一个有效 Prompt 之后（含当前轮自身）的路径，在本次比较前排除；每个有效
+      Prompt 都无条件成为新基准并清空累计，不依赖“最新关键词恰好在前轮不命中”来
+      碰巧跳过，也不让首个 Prompt 的初始 SET 污染下一次比较；
     - **正常澄清/拒绝轮无 Prompt → `not_applicable`**，无论是否带保留标签都计数，
       不按“保留 0”保守计；
     - 标注 `expected_prompt=True` 却未产生 Prompt → 记 `failed_generation` 计数
@@ -351,12 +353,16 @@ def evaluate_preservation_r1(prompt_sequence: list[PromptSequenceTurn]) -> Metri
                 # 计数与是否携带保留标签无关（R1-B #3）。
                 no_prompt_not_applicable += 1
             continue
+        # 每个有效 Prompt 都无条件成为新基准：先完成可用比较，再清空自上一有效
+        # Prompt 以来累计的路径。是否存在保留标签、是否构成比较对，都不能阻止
+        # 清空（F1：否则首个 Prompt 的初始 SET 会永久留在集合里，把后续应保留的
+        # 主体/风格等误当作“本轮合法修改”排除）。
         if groups and previous_with_prompt is not None:
             pairs.append(
                 (previous_with_prompt, turn, groups, sorted(pending_changed))
             )
-            pending_changed.clear()
         previous_with_prompt = turn
+        pending_changed.clear()
 
     if not pairs:
         return MetricPayload(
@@ -448,7 +454,10 @@ def evaluate_generation_completion(
 ) -> MetricPayload:
     """r1 完成率：标注应生成（`expected_prompt=True`）的轮次中实际产生 Prompt 的比例。
 
-    失败轮单独计数（`failed`），不从分母剔除（R1-B #3）。
+    分母由标注派生，包含**全部** `expected_prompt=True` 轮：首次根因之后被级联阻断
+    的轮次同样是“预定生成而未产出”，计未完成而不从分母剔除（F2）。失败轮单独计数
+    （`failed`），由逐轮记录的 `status` / `blocked_by_prior_failure` 区分独立根因与
+    级联阻断（R1-B #3/#4）。`expected_prompt` 非 True 的正常澄清/终局接受轮不入分母。
     """
     expected = [t for t in prompt_sequence if t.expected_prompt is True]
     if not expected:

@@ -29,6 +29,7 @@ from cli_helpers import (
     READY_USER_TURNS,
     FlakyImageProvider,
     ScriptedConsole,
+    append_execution_revision_with_model,
     artifact_count,
     current_intent_value,
     current_state,
@@ -245,6 +246,13 @@ def test_cli_retry_after_second_generation_failure_uses_second_prompt(tmp_path):
         ],
         image_provider=flaky,
     )
+    observed: dict[str, bool] = {}
+
+    def hook(prompt_text: str) -> None:
+        # 第二次生成失败进入 FAILED 后，预检查必须认为"第二版 Prompt 可用"。
+        if "retry 重新生成" in prompt_text:
+            observed["can_retry"] = app.can_retry_generation(single_session_id(repo))
+
     answers = [
         *READY_USER_TURNS,
         "y",  # 第一次确认 → 生成 #1 成功
@@ -253,13 +261,16 @@ def test_cli_retry_after_second_generation_failure_uses_second_prompt(tmp_path):
         "retry",  # 必须复用第二次编译的 Prompt（不能挑第一版的旧 Artifact）
         "accept",
     ]
-    console = ScriptedConsole(answers)
+    console = ScriptedConsole(answers, hook=hook)
 
     assert run_repl(app, console) == 0
 
     session_id = single_session_id(repo)
     assert "provider.timeout" in console.text
     assert current_state(repo, session_id) is WorkflowState.COMPLETED
+    assert observed["can_retry"] is True
+    assert "可用同一 PromptArtifact 重新生成" in console.text
+    assert "历史 Prompt 已过期" not in console.text
     assert len(flaky.requests) == 3  # 成功 / 失败 / retry 成功
     prompts = prompt_artifacts(repo)
     assert len(prompts) == 2
@@ -277,6 +288,120 @@ def test_cli_retry_after_second_generation_failure_uses_second_prompt(tmp_path):
     snapshot = repo.get_current_session_snapshot(session_id)
     assert second_prompt.based_on_intent_revision_id == snapshot.current_intent_revision_id
     assert current_intent_value(repo, session_id, "composition.framing") == "wide_shot"
+
+
+# ---------------------------------------------------------------------------
+# FAILED：旧 Prompt 绑定确认已失效 → 只报告"已过期"，不提示重试
+# ---------------------------------------------------------------------------
+
+
+def test_cli_second_round_compile_failure_reports_expired_prompt(tmp_path):
+    """第一轮成功 → 修改 → 第二轮编译失败：旧 Prompt 存在但绑定确认已失效。"""
+    flaky = FlakyImageProvider(fail_on_calls=())  # 永不失败；只用于统计调用次数
+    app, repo, _llm, _output_dir = make_cli_app(
+        tmp_path,
+        interpreter_responses=READY_RESPONSES,
+        feedback_responses=[
+            feedback_response(
+                "revise",
+                candidate_deltas=[
+                    revise_entry(
+                        "composition.framing", "wide_shot", evidence_fragment="宽"
+                    )
+                ],
+            ),
+        ],
+        image_provider=flaky,
+    )
+    injected = {"done": False}
+
+    def hook(prompt_text: str) -> None:
+        # 反馈被处理前（此时仍是 WAITING_REVIEW 的入口上下文）落一条新的
+        # ExecutionRevision：新的目标模型不受唯一 Renderer 支持 → 第二轮编译失败。
+        # 新 revision 同时让第一轮的 Confirmation 天然失效（旧 Prompt 过期）。
+        if "反馈" in prompt_text and not injected["done"]:
+            injected["done"] = True
+            append_execution_revision_with_model(
+                repo, single_session_id(repo), "unsupported-model"
+            )
+
+    answers = [*READY_USER_TURNS, "y", "把构图改宽一点", "y", "retry", "exit"]
+    console = ScriptedConsole(answers, hook=hook)
+
+    assert run_repl(app, console) == 0
+
+    session_id = single_session_id(repo)
+    assert current_state(repo, session_id) is WorkflowState.FAILED
+    assert "prompt.unsupported_requirement" in console.text
+    # 只有第一轮落库的 Prompt / Generation；第二轮编译失败不产生任何新 Artifact。
+    assert len(prompt_artifacts(repo)) == 1
+    assert artifact_count(repo, "generation_artifacts") == 1
+    # 旧 Prompt 存在但绑定确认已失效 → 不得提示"可用同一 Prompt 重试"。
+    assert app.can_retry_generation(session_id) is False
+    assert "历史 Prompt 已过期" in console.text
+    # 不得把"历史 Prompt 过期"错误描述成"从未编译出 Prompt"。
+    assert "本会话没有可复用的已落库 Prompt" not in console.text
+    # 输入 retry 绝不触发图片 Provider（预检查已拒绝），仍可退出。
+    assert len(flaky.requests) == 1
+
+
+def test_cli_no_reusable_prompt_reports_not_retryable(tmp_path):
+    """首轮编译失败且无 Prompt：准确提示不可重试，输入 retry 不触发 Provider。"""
+    flaky = FlakyImageProvider(fail_on_calls=(1,))
+    app, repo, _llm, _output_dir = make_cli_app(
+        tmp_path,
+        interpreter_responses=READY_RESPONSES,
+        feedback_responses=[],
+        image_provider=flaky,
+        settings=make_settings(image_model="unsupported-model"),
+    )
+    answers = [*READY_USER_TURNS, "y", "retry", "exit"]
+    console = ScriptedConsole(answers)
+
+    assert run_repl(app, console) == 0
+
+    session_id = single_session_id(repo)
+    assert current_state(repo, session_id) is WorkflowState.FAILED
+    assert "prompt.unsupported_requirement" in console.text
+    assert prompt_artifacts(repo) == []
+    assert app.can_retry_generation(session_id) is False
+    assert "没有可复用的已落库 Prompt" in console.text
+    assert "历史 Prompt 已过期" not in console.text
+    assert flaky.requests == []
+
+
+def test_cli_retry_rejected_when_confirmation_expires_after_precheck(tmp_path):
+    """预检查通过后确认失效：底层 retry 仍拒绝，且不调用图片 Provider。"""
+    flaky = FlakyImageProvider(fail_on_calls=(1,))
+    app, repo, _llm, _output_dir = make_cli_app(
+        tmp_path,
+        interpreter_responses=READY_RESPONSES,
+        feedback_responses=[],
+        image_provider=flaky,
+    )
+    mutated = {"done": False}
+    observed: dict[str, bool] = {}
+
+    def hook(prompt_text: str) -> None:
+        if "retry 重新生成" in prompt_text and not mutated["done"]:
+            mutated["done"] = True
+            # 预检查先通过；随后、真正 retry 之前确认被新 revision 天然失效。
+            observed["can_retry"] = app.can_retry_generation(single_session_id(repo))
+            _append_revision_with_framing(repo, single_session_id(repo), "wide_shot")
+
+    answers = [*READY_USER_TURNS, "y", "retry", "exit"]
+    console = ScriptedConsole(answers, hook=hook)
+
+    assert run_repl(app, console) == 0
+
+    session_id = single_session_id(repo)
+    assert observed["can_retry"] is True
+    # 预检查不是授权：底层 GenerationPipeline.retry 仍以 no_valid_confirmation 拒绝。
+    assert "generation.no_valid_confirmation" in console.text
+    assert current_state(repo, session_id) is WorkflowState.FAILED
+    assert len(flaky.requests) == 1  # 只有第一次失败的 Provider 调用
+    assert artifact_count(repo, "prompt_artifacts") == 1
+    assert artifact_count(repo, "generation_artifacts") == 0
 
 
 # ---------------------------------------------------------------------------
