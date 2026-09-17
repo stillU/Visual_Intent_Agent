@@ -9,6 +9,19 @@
 **范围约束**为准、以本文的**命名与路径**为准；发现上游接口问题时按 README 规则
 提出最小修订，不得自行扩大架构。
 
+当前状态（2026-09-16，v0.5 语料发布与集中验收）：在不改动 v0.2 Step 01～09 冻结面
+的前提下，`visual_intent_agent/knowledge/`（严格冻结的 KnowledgeUnit /
+KnowledgeSource / KnowledgeCondition 合同、JSONL 权威语料加载与清单/哈希/版本
+校验、复用 `prompt_engine.engine.DELEGATED_CANDIDATES` 的候选授权）与
+`tests/knowledge/` 已在 v0.4 Rev.4～Rev.6 落地检索、`KnowledgeBundle`、
+PromptEngine/Repository 接入与 CLI（见下文 Rev.5～Rev.7）。v0.5 新增独立发布快照
+`knowledge_base/v0.5/`（`corpus_version = v0.5-approved-1`，5 条真实人工审核 `approved`）；
+`knowledge_base/v0.4/` 保持不变（9 条 draft、0 approved、`build_units() == ()`），
+仍为 CLI 默认知识目录。`knowledge` 包禁止在模块顶层 import `prompt_engine`
+（防循环依赖）。本版取代旧 v0.2 Step 11 的 Milvus/Embedding/Gate B 方案，依据见
+`docs/handoffs/architecture_decision_005.md`；v0.5 发布与验收见
+`docs/handoffs/v0_5_release_handoff.md`。
+
 实施范围：仅 Step 01～09（P0～P3 核心闭环）。Step 10（Gate A）与 Step 11
 （KnowledgeEngine）本轮不实施，本文不为其定义任何模块、表或配置；仅在第 10 节
 说明现有边界为何不阻碍其后续接入。
@@ -799,3 +812,87 @@ ARCHITECTURE.md 的最小修订建议」1～3）与 2 条已知限制确认请�
 Rev.3 不新增模块、不新增状态、不新增依赖、不改 schema、不改任何用例签名与返回
 形状；代码落地由「工单 D：submit_message 接入 evaluate_carry」执行（范围与验收
 命令见 decision 文档），其余冻结内容不变。
+
+### Rev.4 — 2026-09-16（对应 `docs/handoffs/architecture_decision_005.md`）
+
+v0.4 Step 01 以 `architecture_decision_005.md` 冻结知识合同与语料层：新增
+`visual_intent_agent/knowledge/`、`knowledge_base/v0.4/`、`tests/knowledge/`；
+JSONL 为权威源，`manifest.json` 绑定逐文件 sha256 与 Schema/分词/检索版本；
+`applicable_path` 严格限定 `lighting.character` / `composition.framing` /
+`camera.depth_of_field`，`candidate_value` 复用
+`prompt_engine.engine.DELEGATED_CANDIDATES`（仅函数级惰性 import，禁止顶层反向
+依赖，不建第二份候选表）；`content_hash` 只绑定 `content`，其余授权字段完整性由
+清单文件 sha256 与语料版本绑定（Step 02 的 `KnowledgeBundle` 必须记录这些指纹）；
+conditions 冻结 AND / 空条件恒满足 / 缺字段不满足 / 仅读已确认 Intent /
+类型精确比较语义；构建消费只允许 `approved`。本 Rev 不新增依赖，不在 Step 01
+实施检索、`KnowledgeBundle`、PromptEngine、Repository 或 CLI 接线，也不修改
+v0.2 Step 01～09 的任何既有冻结条目。
+
+### Rev.5 — 2026-09-16（v0.4 Step 02～04 兼容扩展）
+
+v0.4 在 Rev.4 合同之上完成本地、可关闭、可追溯的知识辅助闭环：
+
+- `knowledge/retrieval.py` 与 `knowledge/bundle.py` 实现 `keyword.v1` / `lexical.v1`、
+  approved-only 过滤、条件判定、稳定 Top-3、歧义回退及编译级 `KnowledgeBundle`；
+  Bundle ID 使用新增兼容前缀 `kbu_`，可复现性由查询、排序结果与语料指纹保证，
+  不以随机 ID 或时间作为等价判断依据。
+- `RealizationValue` 兼容追加 `knowledge_bundle_id` / `knowledge_unit_id` /
+  `knowledge_unit_version`（三项全有或全空）；`PromptArtifact` 兼容追加
+  `knowledge_bundle_refs`（默认空）。知识仅解释具体实现值的选择原因，不新增
+  `source_kind=knowledge`，不构成用户授权。
+- SQLite schema 升为 `user_version=2`，新增第 10 张 append-only 表
+  `knowledge_bundles`；Repository 追加 `append_knowledge_bundle`、
+  `get_knowledge_bundle`、`list_knowledge_bundles`。v1→v2 只补表，不改写旧 payload、
+  refs 或历史 Artifact。
+- `PromptEngine(renderer, repo, *, knowledge_engine=None)` 默认关闭知识检索；仅对本版
+  三条已确认委托、无值、未 PIN、无 active Realization 的路径检索，并在消费端复核
+  Bundle 身份、候选与授权边界。持久化顺序为 Bundle→Realization→Prompt；retry 复用
+  原 Prompt，不重新检索。
+- CLI 以 `--rag` 显式开启、`--knowledge-dir` 指定本地目录；默认关闭，拒绝远程 URL。
+  `--demo --rag` 的 approved 单元明确是非生产测试夹具。生产语料仍为 9 条 draft、
+  0 approved，因此当前真实语料启用时只会透明回退，不能据此声称图片质量改善。
+
+本 Rev 不新增外部依赖、网络知识源、Embedding、向量库或额外 LLM 调用；正式评测仍须
+满足 `docs/task_books/mvp_v0.4/05_evaluation_readiness.md` 的独立启动条件。
+
+### Rev.6 — 2026-09-16（对应 `docs/handoffs/architecture_decision_006.md`）
+
+v0.4 后置修复 F2 在 Rev.5 之上补齐消费端纵深校验，全部为兼容追加，不改 schema、
+不迁移数据、不重写历史：
+
+- `knowledge/bundle.py` 新增 `KnowledgeEligibilitySnapshot`（`conditions` /
+  `target_models` / `review_status` / `reviewer` / `reviewed_at`，版本标识
+  `eligibility.v1` 落在嵌套快照内）；`KnowledgeUnitHit` 追加可选
+  `eligibility_snapshot`（默认 `None` = 旧记录未提供条件证据，**不得**当作无限适用）。
+  快照只由 `LocalKnowledgeEngine` 从已校验的 `KnowledgeUnit` 原样复制。
+- `KnowledgeBundle` 兼容追加默认空的 `adoption_decisions`
+  （`KnowledgeAdoptionDecision`：`adopted` / `rejected` + 封闭原因码），由
+  `with_adoption_decisions` 返回**新**对象后落库，原检索器对象不被原地修改；
+  旧 payload 缺字段仍可读。检索器推荐与编译器裁定由此可区分、可查询。
+- `PromptEngine` 消费端新增 `evaluate_recommendation`：复核快照版本、审核、模型适用
+  与 conditions（复用 `evaluate_conditions` / `target_model_applies`），对实际内容
+  重算 `content_hash`；任何失败回退固定候选表并记录拒绝原因，身份不符、越界或无法
+  重新通过合同校验的伪 Bundle 仍硬失败。
+- CLI 只读展示持久化裁定：被拒推荐绝不显示成 adopted，旧 Bundle 明确标注"未记录
+  裁定"。
+- 不新增依赖、表或配置，不放宽 `extra="forbid"`、Intent、Policy、确认门禁与候选
+  白名单；旧 active Realization 复用与原 Prompt retry 行为不变。Rev.6 时生产语料仍为
+  9 条 draft、0 approved，本 Rev 不构成知识审核或 RAG 收益结论。
+
+### Rev.7 — 2026-09-16（v0.5 语料发布与集中验收，无运行时变更）
+
+v0.5 不新增或修改运行时模块、领域合同、Schema、表或默认配置；只新增独立发布语料、
+离线测试与文档：
+
+- 新增 `knowledge_base/v0.5/`（`corpus_version = v0.5-approved-1`）：3 个 JSONL
+  （camera 2 / framing 1 / lighting 2）共 5 条**真实人工审核** `approved`
+  （审核人 `change`，`2026-09-16T10:25:59Z`），由获批 v2 提案机械录入（只改
+  `review_status` / `reviewer` / `reviewed_at`），文件哈希/条数与 `content_hash` 可核验。
+- `knowledge_base/v0.4/` 字节未改（`manifest.json` sha256 仍 `ec013105…`），
+  仍为 9 draft / 0 approved、`build_units() == ()`；`resolve_knowledge_dir(None)` 与
+  `--rag` 默认行为不变，使用新语料须显式 `--knowledge-dir knowledge_base/v0.5`。
+- 发布守卫 `tests/knowledge/test_knowledge_v0_5_release.py` 自动断言"发布相对获批提案
+  仅审核三字段可变"与 v0.4 manifest 字节冻结；离线采用验证见
+  `tests/generation/test_generation_v0_5_release_adoption.py`（含 P1 真实工作流闭环）。
+- 本 Rev 不构成知识质量、RAG 收益或图片质量结论；正式评测未执行，属 v0.5 边界，
+  见 `docs/handoffs/v0_5_release_handoff.md`。

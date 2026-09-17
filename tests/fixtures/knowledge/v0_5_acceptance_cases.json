@@ -1,0 +1,573 @@
+{
+  "schema": "v0.5-acceptance-cases.v1",
+  "description": "v0.5 post-fix F2 current executable acceptance list: 3 knowledge paths x 10 scenarios, bound to the final release corpus.",
+  "corpus_version": "v0.5-approved-1",
+  "corpus_dir": "knowledge_base/v0.5",
+  "corpus_manifest_path": "knowledge_base/v0.5/manifest.json",
+  "corpus_manifest_sha256": "0bbeea9bbf7438bd8480e4cc56b1797368e2aa6b47c1601b0f276b44697b37d7",
+  "reviewer": "change",
+  "reviewed_at": "2026-09-16T10:25:59Z",
+  "dataset_derivation": "none - project-original engineering cases; no GenEval / T2I-CompBench / COCO-CN text, IDs or splits are copied, and no case is derived from a dataset sample",
+  "paths": [
+    "camera.depth_of_field",
+    "composition.framing",
+    "lighting.character"
+  ],
+  "categories": [
+    "delegated",
+    "explicit_value",
+    "pinned",
+    "unconfirmed_condition",
+    "condition_mismatch",
+    "model_mismatch",
+    "unapproved_knowledge",
+    "conflict",
+    "missing_knowledge",
+    "successful_adoption"
+  ],
+  "test_module": "tests/generation/test_generation_v0_5_acceptance_matrix.py",
+  "reused_test_module": "tests/generation/test_generation_v0_5_release_adoption.py",
+  "run_tool": "tools/run_v0_5_acceptance_cases.py",
+  "cases": [
+    {
+      "case_id": "camera.depth_of_field::delegated",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "delegated",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed intent composition.framing=close_up, style.primary=cinematic; camera.depth_of_field user_delegated, unpinned",
+      "expected": {
+        "outcome": "adopted",
+        "reason_code": null,
+        "candidate_value": "shallow",
+        "knowledge_unit_id": "camera.depth_of_field.shallow_for_close_up",
+        "isolated_cause": "real approved production rule; user_delegated, unpinned, conditions satisfied"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::delegated]",
+      "derived_from_dataset": false,
+      "notes": "loads knowledge_base/v0.5 (v0.5-approved-1) via LocalKnowledgeEngine; no fixture knowledge"
+    },
+    {
+      "case_id": "camera.depth_of_field::explicit_value",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "explicit_value",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed explicit camera.depth_of_field=deep; path not delegated",
+      "expected": {
+        "outcome": "not_overwritten",
+        "reason_code": "explicit_value_preserved",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "explicit user value; no retrieval and no Bundle for the path"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::explicit_value]",
+      "derived_from_dataset": false,
+      "notes": "production corpus is available but the explicit path is never queried"
+    },
+    {
+      "case_id": "camera.depth_of_field::pinned",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "pinned",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "camera.depth_of_field user_delegated and simultaneously PINned; no value",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "path_pinned",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "PIN blocks retrieval for that path; zero retrieval, zero Bundle"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::pinned]",
+      "derived_from_dataset": false,
+      "notes": "delegation is legal and rules are approved; only the PIN protects the path"
+    },
+    {
+      "case_id": "camera.depth_of_field::unconfirmed_condition",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "unconfirmed_condition",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "camera.depth_of_field neither has a confirmed value nor user_delegated",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "path_not_confirmed",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "unconfirmed / protected path is never retrieved; zero retrieval, zero Bundle"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::unconfirmed_condition]",
+      "derived_from_dataset": false,
+      "notes": "production approved rules exist for the path but are never consulted"
+    },
+    {
+      "case_id": "camera.depth_of_field::condition_mismatch",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "condition_mismatch",
+      "executor": "reused",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "camera.depth_of_field user_delegated with a confirmed value that violates one required condition",
+      "expected": {
+        "outcome": "rejected",
+        "reason_code": "conditions_not_satisfied",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "only the condition value differs; delegation/approval/model preserved"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_release_adoption.py::test_conditions_that_do_not_hold_fall_back_to_the_deterministic_baseline[camera.depth_of_field.shallow_for_close_up]",
+      "derived_from_dataset": false,
+      "notes": "reuses the existing per-rule production negative case"
+    },
+    {
+      "case_id": "camera.depth_of_field::model_mismatch",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "model_mismatch",
+      "executor": "matrix",
+      "fixture_type": "synthetic_approved_fixture",
+      "precondition": "camera.depth_of_field user_delegated with satisfied conditions; fixture unit approved with target_models=('qwen-image-2.0',)",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "model_mismatch",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "unit is approved and conditions hold; only target model differs (approved twin is adopted)"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::model_mismatch]",
+      "derived_from_dataset": false,
+      "notes": "draft filtering cannot explain rejection: the unit is approved"
+    },
+    {
+      "case_id": "camera.depth_of_field::unapproved_knowledge",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "unapproved_knowledge",
+      "executor": "matrix",
+      "fixture_type": "synthetic_draft_and_approved_fixture",
+      "precondition": "camera.depth_of_field user_delegated with satisfied conditions; synthetic fixture corpus carries exactly one draft unit (knowledge_id camera.depth_of_field.acceptance-fixture, review_status=draft, no reviewer/reviewed_at)",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "no_approved_units",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "the draft unit is filtered at corpus build (build_units() empty); the path is queried but gets no consumable candidate, so the corpus-level no_approved_units fallback applies with no path result/recommendation/decision; an approved twin with identical fields (only review_status differs) is adopted"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::unapproved_knowledge]",
+      "derived_from_dataset": false,
+      "notes": "the draft is filtered before scoring, so it never becomes an adoptable candidate and never appears as a retrieval rejection; unlike missing_knowledge this corpus is a synthetic fixture that does contain the unit (as draft), which proves the isolation"
+    },
+    {
+      "case_id": "camera.depth_of_field::conflict",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "conflict",
+      "executor": "matrix",
+      "fixture_type": "synthetic_two_approved_fixtures",
+      "precondition": "camera.depth_of_field user_delegated; two consumable approved units with different candidates and equal score",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "tie_ambiguous",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "both units approved, conditions satisfied, equal score; tie_ambiguous fallback"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::conflict]",
+      "derived_from_dataset": false,
+      "notes": "uses two approved consumable units, not two drafts"
+    },
+    {
+      "case_id": "camera.depth_of_field::missing_knowledge",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "missing_knowledge",
+      "executor": "matrix",
+      "fixture_type": "synthetic_other_path_approved_fixture",
+      "precondition": "camera.depth_of_field user_delegated; synthetic fixture corpus builds one approved unit that belongs to a different knowledge path, so the corpus is usable and the delegated camera.depth_of_field path has no applicable unit at all",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "no_hit",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "the corpus is buildable (build_units() has another path's approved unit, Bundle status=ok) but the target path has no applicable unit: its query yields a path-level no_hit with zero hits/rejections, no recommendation and no decision; the fallback carries no knowledge traceability, and adding one approved unit for the target path makes it adopted (control)"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[camera.depth_of_field::missing_knowledge]",
+      "derived_from_dataset": false,
+      "notes": "unlike unapproved_knowledge (corpus has no approved unit anywhere -> corpus-level no_approved_units), here the corpus is healthy and only the target path lacks knowledge"
+    },
+    {
+      "case_id": "camera.depth_of_field::successful_adoption",
+      "knowledge_path": "camera.depth_of_field",
+      "category": "successful_adoption",
+      "executor": "reused",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed intent composition.framing=close_up, style.primary=cinematic; camera.depth_of_field user_delegated, unpinned",
+      "expected": {
+        "outcome": "adopted",
+        "reason_code": null,
+        "candidate_value": "shallow",
+        "knowledge_unit_id": "camera.depth_of_field.shallow_for_close_up",
+        "isolated_cause": "final production snapshot adopted with Prompt/Realization/SQLite Bundle traceability"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_release_adoption.py::test_each_approved_rule_is_reachable_and_actually_adopted[camera.depth_of_field.shallow_for_close_up]",
+      "derived_from_dataset": false,
+      "notes": "reuses the existing per-rule production positive case (final snapshot + temp real SQLite)"
+    },
+    {
+      "case_id": "composition.framing::delegated",
+      "knowledge_path": "composition.framing",
+      "category": "delegated",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed intent subject.pose_action=standing, environment.mode=studio; composition.framing user_delegated, unpinned",
+      "expected": {
+        "outcome": "adopted",
+        "reason_code": null,
+        "candidate_value": "medium_shot",
+        "knowledge_unit_id": "composition.framing.medium_shot_for_standing_pose",
+        "isolated_cause": "real approved production rule; user_delegated, unpinned, conditions satisfied"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::delegated]",
+      "derived_from_dataset": false,
+      "notes": "loads knowledge_base/v0.5 (v0.5-approved-1) via LocalKnowledgeEngine; no fixture knowledge"
+    },
+    {
+      "case_id": "composition.framing::explicit_value",
+      "knowledge_path": "composition.framing",
+      "category": "explicit_value",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed explicit composition.framing=close_up; path not delegated",
+      "expected": {
+        "outcome": "not_overwritten",
+        "reason_code": "explicit_value_preserved",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "explicit user value; no retrieval and no Bundle for the path"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::explicit_value]",
+      "derived_from_dataset": false,
+      "notes": "production corpus is available but the explicit path is never queried"
+    },
+    {
+      "case_id": "composition.framing::pinned",
+      "knowledge_path": "composition.framing",
+      "category": "pinned",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "composition.framing user_delegated and simultaneously PINned; no value",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "path_pinned",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "PIN blocks retrieval for that path; zero retrieval, zero Bundle"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::pinned]",
+      "derived_from_dataset": false,
+      "notes": "delegation is legal and rules are approved; only the PIN protects the path"
+    },
+    {
+      "case_id": "composition.framing::unconfirmed_condition",
+      "knowledge_path": "composition.framing",
+      "category": "unconfirmed_condition",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "composition.framing neither has a confirmed value nor user_delegated",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "path_not_confirmed",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "unconfirmed / protected path is never retrieved; zero retrieval, zero Bundle"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::unconfirmed_condition]",
+      "derived_from_dataset": false,
+      "notes": "production approved rules exist for the path but are never consulted"
+    },
+    {
+      "case_id": "composition.framing::condition_mismatch",
+      "knowledge_path": "composition.framing",
+      "category": "condition_mismatch",
+      "executor": "reused",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "composition.framing user_delegated with a confirmed value that violates one required condition",
+      "expected": {
+        "outcome": "rejected",
+        "reason_code": "conditions_not_satisfied",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "only the condition value differs; delegation/approval/model preserved"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_release_adoption.py::test_conditions_that_do_not_hold_fall_back_to_the_deterministic_baseline[composition.framing.medium_shot_for_standing_pose]",
+      "derived_from_dataset": false,
+      "notes": "reuses the existing per-rule production negative case"
+    },
+    {
+      "case_id": "composition.framing::model_mismatch",
+      "knowledge_path": "composition.framing",
+      "category": "model_mismatch",
+      "executor": "matrix",
+      "fixture_type": "synthetic_approved_fixture",
+      "precondition": "composition.framing user_delegated with satisfied conditions; fixture unit approved with target_models=('qwen-image-2.0',)",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "model_mismatch",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "unit is approved and conditions hold; only target model differs (approved twin is adopted)"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::model_mismatch]",
+      "derived_from_dataset": false,
+      "notes": "draft filtering cannot explain rejection: the unit is approved"
+    },
+    {
+      "case_id": "composition.framing::unapproved_knowledge",
+      "knowledge_path": "composition.framing",
+      "category": "unapproved_knowledge",
+      "executor": "matrix",
+      "fixture_type": "synthetic_draft_and_approved_fixture",
+      "precondition": "composition.framing user_delegated with satisfied conditions; synthetic fixture corpus carries exactly one draft unit (knowledge_id composition.framing.acceptance-fixture, review_status=draft, no reviewer/reviewed_at)",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "no_approved_units",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "the draft unit is filtered at corpus build (build_units() empty); the path is queried but gets no consumable candidate, so the corpus-level no_approved_units fallback applies with no path result/recommendation/decision; an approved twin with identical fields (only review_status differs) is adopted"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::unapproved_knowledge]",
+      "derived_from_dataset": false,
+      "notes": "the draft is filtered before scoring, so it never becomes an adoptable candidate and never appears as a retrieval rejection; unlike missing_knowledge this corpus is a synthetic fixture that does contain the unit (as draft), which proves the isolation"
+    },
+    {
+      "case_id": "composition.framing::conflict",
+      "knowledge_path": "composition.framing",
+      "category": "conflict",
+      "executor": "matrix",
+      "fixture_type": "synthetic_two_approved_fixtures",
+      "precondition": "composition.framing user_delegated; two consumable approved units with different candidates and equal score",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "tie_ambiguous",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "both units approved, conditions satisfied, equal score; tie_ambiguous fallback"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::conflict]",
+      "derived_from_dataset": false,
+      "notes": "uses two approved consumable units, not two drafts"
+    },
+    {
+      "case_id": "composition.framing::missing_knowledge",
+      "knowledge_path": "composition.framing",
+      "category": "missing_knowledge",
+      "executor": "matrix",
+      "fixture_type": "synthetic_other_path_approved_fixture",
+      "precondition": "composition.framing user_delegated; synthetic fixture corpus builds one approved unit that belongs to a different knowledge path, so the corpus is usable and the delegated composition.framing path has no applicable unit at all",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "no_hit",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "the corpus is buildable (build_units() has another path's approved unit, Bundle status=ok) but the target path has no applicable unit: its query yields a path-level no_hit with zero hits/rejections, no recommendation and no decision; the fallback carries no knowledge traceability, and adding one approved unit for the target path makes it adopted (control)"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[composition.framing::missing_knowledge]",
+      "derived_from_dataset": false,
+      "notes": "unlike unapproved_knowledge (corpus has no approved unit anywhere -> corpus-level no_approved_units), here the corpus is healthy and only the target path lacks knowledge"
+    },
+    {
+      "case_id": "composition.framing::successful_adoption",
+      "knowledge_path": "composition.framing",
+      "category": "successful_adoption",
+      "executor": "reused",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed intent subject.pose_action=standing, environment.mode=studio; composition.framing user_delegated, unpinned",
+      "expected": {
+        "outcome": "adopted",
+        "reason_code": null,
+        "candidate_value": "medium_shot",
+        "knowledge_unit_id": "composition.framing.medium_shot_for_standing_pose",
+        "isolated_cause": "final production snapshot adopted with Prompt/Realization/SQLite Bundle traceability"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_release_adoption.py::test_each_approved_rule_is_reachable_and_actually_adopted[composition.framing.medium_shot_for_standing_pose]",
+      "derived_from_dataset": false,
+      "notes": "reuses the existing per-rule production positive case (final snapshot + temp real SQLite)"
+    },
+    {
+      "case_id": "lighting.character::delegated",
+      "knowledge_path": "lighting.character",
+      "category": "delegated",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed intent composition.framing=close_up, environment.mode=studio; lighting.character user_delegated, unpinned",
+      "expected": {
+        "outcome": "adopted",
+        "reason_code": null,
+        "candidate_value": "soft",
+        "knowledge_unit_id": "lighting.character.soft_for_tight_framing",
+        "isolated_cause": "real approved production rule; user_delegated, unpinned, conditions satisfied"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::delegated]",
+      "derived_from_dataset": false,
+      "notes": "loads knowledge_base/v0.5 (v0.5-approved-1) via LocalKnowledgeEngine; no fixture knowledge"
+    },
+    {
+      "case_id": "lighting.character::explicit_value",
+      "knowledge_path": "lighting.character",
+      "category": "explicit_value",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed explicit lighting.character=dramatic; path not delegated",
+      "expected": {
+        "outcome": "not_overwritten",
+        "reason_code": "explicit_value_preserved",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "explicit user value; no retrieval and no Bundle for the path"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::explicit_value]",
+      "derived_from_dataset": false,
+      "notes": "production corpus is available but the explicit path is never queried"
+    },
+    {
+      "case_id": "lighting.character::pinned",
+      "knowledge_path": "lighting.character",
+      "category": "pinned",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "lighting.character user_delegated and simultaneously PINned; no value",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "path_pinned",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "PIN blocks retrieval for that path; zero retrieval, zero Bundle"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::pinned]",
+      "derived_from_dataset": false,
+      "notes": "delegation is legal and rules are approved; only the PIN protects the path"
+    },
+    {
+      "case_id": "lighting.character::unconfirmed_condition",
+      "knowledge_path": "lighting.character",
+      "category": "unconfirmed_condition",
+      "executor": "matrix",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "lighting.character neither has a confirmed value nor user_delegated",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "path_not_confirmed",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "unconfirmed / protected path is never retrieved; zero retrieval, zero Bundle"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::unconfirmed_condition]",
+      "derived_from_dataset": false,
+      "notes": "production approved rules exist for the path but are never consulted"
+    },
+    {
+      "case_id": "lighting.character::condition_mismatch",
+      "knowledge_path": "lighting.character",
+      "category": "condition_mismatch",
+      "executor": "reused",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "lighting.character user_delegated with a confirmed value that violates one required condition",
+      "expected": {
+        "outcome": "rejected",
+        "reason_code": "conditions_not_satisfied",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "only the condition value differs; delegation/approval/model preserved"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_release_adoption.py::test_conditions_that_do_not_hold_fall_back_to_the_deterministic_baseline[lighting.character.soft_for_tight_framing]",
+      "derived_from_dataset": false,
+      "notes": "reuses the existing per-rule production negative case"
+    },
+    {
+      "case_id": "lighting.character::model_mismatch",
+      "knowledge_path": "lighting.character",
+      "category": "model_mismatch",
+      "executor": "matrix",
+      "fixture_type": "synthetic_approved_fixture",
+      "precondition": "lighting.character user_delegated with satisfied conditions; fixture unit approved with target_models=('qwen-image-2.0',)",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "model_mismatch",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "unit is approved and conditions hold; only target model differs (approved twin is adopted)"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::model_mismatch]",
+      "derived_from_dataset": false,
+      "notes": "draft filtering cannot explain rejection: the unit is approved"
+    },
+    {
+      "case_id": "lighting.character::unapproved_knowledge",
+      "knowledge_path": "lighting.character",
+      "category": "unapproved_knowledge",
+      "executor": "matrix",
+      "fixture_type": "synthetic_draft_and_approved_fixture",
+      "precondition": "lighting.character user_delegated with satisfied conditions; synthetic fixture corpus carries exactly one draft unit (knowledge_id lighting.character.acceptance-fixture, review_status=draft, no reviewer/reviewed_at)",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "no_approved_units",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "the draft unit is filtered at corpus build (build_units() empty); the path is queried but gets no consumable candidate, so the corpus-level no_approved_units fallback applies with no path result/recommendation/decision; an approved twin with identical fields (only review_status differs) is adopted"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::unapproved_knowledge]",
+      "derived_from_dataset": false,
+      "notes": "the draft is filtered before scoring, so it never becomes an adoptable candidate and never appears as a retrieval rejection; unlike missing_knowledge this corpus is a synthetic fixture that does contain the unit (as draft), which proves the isolation"
+    },
+    {
+      "case_id": "lighting.character::conflict",
+      "knowledge_path": "lighting.character",
+      "category": "conflict",
+      "executor": "matrix",
+      "fixture_type": "synthetic_two_approved_fixtures",
+      "precondition": "lighting.character user_delegated; two consumable approved units with different candidates and equal score",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "tie_ambiguous",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "both units approved, conditions satisfied, equal score; tie_ambiguous fallback"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::conflict]",
+      "derived_from_dataset": false,
+      "notes": "uses two approved consumable units, not two drafts"
+    },
+    {
+      "case_id": "lighting.character::missing_knowledge",
+      "knowledge_path": "lighting.character",
+      "category": "missing_knowledge",
+      "executor": "matrix",
+      "fixture_type": "synthetic_other_path_approved_fixture",
+      "precondition": "lighting.character user_delegated; synthetic fixture corpus builds one approved unit that belongs to a different knowledge path, so the corpus is usable and the delegated lighting.character path has no applicable unit at all",
+      "expected": {
+        "outcome": "not_adopted",
+        "reason_code": "no_hit",
+        "candidate_value": null,
+        "knowledge_unit_id": null,
+        "isolated_cause": "the corpus is buildable (build_units() has another path's approved unit, Bundle status=ok) but the target path has no applicable unit: its query yields a path-level no_hit with zero hits/rejections, no recommendation and no decision; the fallback carries no knowledge traceability, and adding one approved unit for the target path makes it adopted (control)"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_acceptance_matrix.py::test_acceptance_case[lighting.character::missing_knowledge]",
+      "derived_from_dataset": false,
+      "notes": "unlike unapproved_knowledge (corpus has no approved unit anywhere -> corpus-level no_approved_units), here the corpus is healthy and only the target path lacks knowledge"
+    },
+    {
+      "case_id": "lighting.character::successful_adoption",
+      "knowledge_path": "lighting.character",
+      "category": "successful_adoption",
+      "executor": "reused",
+      "fixture_type": "production_release_snapshot",
+      "precondition": "confirmed intent composition.framing=close_up, environment.mode=studio; lighting.character user_delegated, unpinned",
+      "expected": {
+        "outcome": "adopted",
+        "reason_code": null,
+        "candidate_value": "soft",
+        "knowledge_unit_id": "lighting.character.soft_for_tight_framing",
+        "isolated_cause": "final production snapshot adopted with Prompt/Realization/SQLite Bundle traceability"
+      },
+      "test_node_id": "tests/generation/test_generation_v0_5_release_adoption.py::test_each_approved_rule_is_reachable_and_actually_adopted[lighting.character.soft_for_tight_framing]",
+      "derived_from_dataset": false,
+      "notes": "reuses the existing per-rule production positive case (final snapshot + temp real SQLite)"
+    }
+  ]
+}

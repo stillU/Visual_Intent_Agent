@@ -61,6 +61,10 @@ EXPECTED_REPOSITORY_METHODS = {
     "append_feedback_result",
     "append_realization_state",
     "get_current_realization_state",
+    # v0.4 Step 03：append-only knowledge_bundles 信封
+    "append_knowledge_bundle",
+    "get_knowledge_bundle",
+    "list_knowledge_bundles",
 }
 
 BANNED_THIRD_PARTY = {
@@ -150,6 +154,15 @@ def test_signatures_match_the_frozen_architecture_table() -> None:
         "refs",
         "payload",
     ]
+    assert parameters(SQLiteRepository.append_knowledge_bundle) == [
+        "self",
+        "bundle_id",
+        "session_id",
+        "refs",
+        "payload",
+    ]
+    assert parameters(SQLiteRepository.get_knowledge_bundle) == ["self", "bundle_id"]
+    assert parameters(SQLiteRepository.list_knowledge_bundles) == ["self", "session_id"]
 
 
 def test_protocol_and_implementation_share_the_same_parameter_names() -> None:

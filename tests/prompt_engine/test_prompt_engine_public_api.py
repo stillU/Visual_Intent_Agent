@@ -64,8 +64,11 @@ def test_compilation_spec_is_internal_and_not_exported():
 
 
 def test_engine_constructor_and_compile_signature_match_the_frozen_table():
-    init_params = list(inspect.signature(PromptEngine.__init__).parameters)
-    assert init_params == ["self", "renderer", "repo"]
+    signature = inspect.signature(PromptEngine.__init__)
+    assert list(signature.parameters) == ["self", "renderer", "repo", "knowledge_engine"]
+    # v0.4 Step 03：知识引擎是**可选 keyword-only** 依赖，默认 None（关闭 RAG）。
+    assert signature.parameters["knowledge_engine"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert signature.parameters["knowledge_engine"].default is None
     compile_params = list(inspect.signature(PromptEngine.compile).parameters)
     assert compile_params == ["self", "request"]
 

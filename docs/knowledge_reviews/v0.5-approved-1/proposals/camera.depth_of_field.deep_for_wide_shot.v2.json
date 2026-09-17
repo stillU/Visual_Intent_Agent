@@ -1,0 +1,54 @@
+{
+  "aliases": [
+    "deep dof",
+    "深景深效果"
+  ],
+  "applicable_path": "camera.depth_of_field",
+  "candidate_value": "deep",
+  "conditions": [
+    {
+      "operator": "equals",
+      "path": "composition.framing",
+      "values": [
+        "wide_shot"
+      ]
+    },
+    {
+      "operator": "equals",
+      "path": "environment.mode",
+      "values": [
+        "outdoor"
+      ]
+    }
+  ],
+  "content": "当构图被确认为 wide_shot 且环境为 outdoor 时，景深优先选择 deep：这是项目对户外大范围场景的默认偏好，便于前景、主体与背景同时可辨并保留地点层次，可被用户明确值或 PIN 覆盖。wide_shot 是景别描述，不等于广角焦距，也不规定视角或透视；deep 不代表无限景深，不承诺空间透视准确。仅在 camera.depth_of_field 为用户委托、未 PIN 且无 active Realization 时提议；用户需要浅景深或背景虚化时以用户值为准。",
+  "content_hash": "b32de75822d16f0dc21786543f4422aa8eab24a14869eee07e44636eb9cd1db9",
+  "keywords": [
+    "深景深",
+    "环境可读",
+    "空间层次",
+    "户外",
+    "deep depth of field",
+    "wide shot",
+    "outdoor"
+  ],
+  "knowledge_id": "camera.depth_of_field.deep_for_wide_shot",
+  "review_status": "draft",
+  "reviewed_at": null,
+  "reviewer": null,
+  "source": {
+    "license": "internal-project-original",
+    "locator": "camera.depth_of_field.deep_for_wide_shot",
+    "original_declaration": "由 v0.4 draft 规则收窄/改写而来的项目原创启发式提案，未复制任何第三方文本；作为待人工审核的 draft 交付，不声称已核实任何模型官方能力。",
+    "repository_path": "data/staging/rag_resources_20260916/knowledge_review/draft_proposals/camera.depth_of_field.deep_for_wide_shot.v2.json",
+    "source_date": null,
+    "source_revision": "v0.5-draft-proposal-1",
+    "source_type": "project_original",
+    "title": "领域规则（收窄提案）：户外宽景的深景深偏好（项目原创）",
+    "url": null
+  },
+  "target_models": [
+    "any"
+  ],
+  "version": "2"
+}

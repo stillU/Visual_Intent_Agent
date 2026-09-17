@@ -1,19 +1,20 @@
--- Step 04 SQLite schema v1（ARCHITECTURE.md 4「Step 04」）。
+-- SQLite schema v2（Step 04 的 9 张表 + v0.4 Step 03 的 knowledge_bundles）。
 --
--- 恰好 9 张表：
+-- 恰好 10 张表：
 --   sessions / messages / intent_revisions / execution_revisions / confirmations
 --   + realization_states / prompt_artifacts / generation_artifacts / feedback_results
---   （信封模式：refs 外键 + payload JSON；本步骤不建 knowledge_bundles）
+--   + knowledge_bundles（v2 新增；全部信封模式：refs 外键 + payload JSON）
 --
--- 迁移：由 repository.py 通过 `PRAGMA user_version` 做最小迁移；本文件只含 v1 DDL，
--- 全部 `IF NOT EXISTS`，因此中途失败后可安全重跑。
+-- 迁移：由 repository.py 通过 `PRAGMA user_version` 做最小迁移。v1 → v2 只新增
+-- `knowledge_bundles`（与它的 session 索引），不删除任何表、不改写旧 payload/refs。
+-- 本文件全部 `IF NOT EXISTS`，因此对任一旧版本重跑只会补齐缺失对象、可安全重跑。
 -- `PRAGMA foreign_keys` 是连接级设置（且不能在事务内生效），由 repository.py 在每次
 -- 建立连接时显式打开，不写在本文件里。
 --
--- 不可覆盖约定：intent_revisions / execution_revisions / confirmations 以及四张
--- Artifact 表**只有 INSERT 路径**，没有任何 UPDATE；`sessions` 只保存"当前指针"，
--- 由 Step 04 在同一事务内推进。业务模型整份 JSON 存入 *_json / payload 列，
--- 保证读回与写入逐值一致。
+-- 不可覆盖约定：intent_revisions / execution_revisions / confirmations 以及各张
+-- Artifact 表（含 v2 的 knowledge_bundles）**只有 INSERT 路径**，没有任何 UPDATE；
+-- `sessions` 只保存"当前指针"，由 Step 04 在同一事务内推进。业务模型整份 JSON
+-- 存入 *_json / payload 列，保证读回与写入逐值一致。
 
 -- ---------------------------------------------------------------------------
 -- 1. sessions：会话 + 当前指针（唯一允许 UPDATE 的表）
@@ -140,3 +141,22 @@ CREATE TABLE IF NOT EXISTS realization_states (
     created_at                  TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_realization_states_session ON realization_states(session_id);
+
+-- ---------------------------------------------------------------------------
+-- 10. knowledge_bundles（信封，v2 新增）：必填 refs = intent_revision_id,
+--     execution_revision_id, confirmation_id（精确三键，各自真外键）。
+--     v0.4 Step 03 编译级 KnowledgeBundle 的不可变快照；append-only，无 UPDATE。
+--     session_id 与三个引用记录必须同属一个会话（写入时由 repository.py 校验，
+--     会话列本身另有真外键）。
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS knowledge_bundles (
+    bundle_id             TEXT PRIMARY KEY,
+    session_id            TEXT NOT NULL REFERENCES sessions(session_id),
+    intent_revision_id    TEXT NOT NULL REFERENCES intent_revisions(intent_revision_id),
+    execution_revision_id TEXT NOT NULL REFERENCES execution_revisions(execution_revision_id),
+    confirmation_id       TEXT NOT NULL REFERENCES confirmations(confirmation_id),
+    refs_json             TEXT NOT NULL,
+    payload               TEXT NOT NULL,
+    created_at            TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_knowledge_bundles_session ON knowledge_bundles(session_id);

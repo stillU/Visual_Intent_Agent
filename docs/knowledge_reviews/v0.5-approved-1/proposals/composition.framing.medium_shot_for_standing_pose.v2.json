@@ -1,0 +1,57 @@
+{
+  "aliases": [
+    "medium framing",
+    "中景构图"
+  ],
+  "applicable_path": "composition.framing",
+  "candidate_value": "medium_shot",
+  "conditions": [
+    {
+      "operator": "in",
+      "path": "subject.pose_action",
+      "values": [
+        "standing",
+        "walking"
+      ]
+    },
+    {
+      "operator": "equals",
+      "path": "environment.mode",
+      "values": [
+        "studio"
+      ]
+    }
+  ],
+  "content": "当姿态被确认为 standing 或 walking 且环境为 studio 时，构图优先选择 medium_shot：这是项目对棚内完整动作轮廓的默认偏好，试图在保留肢体动作与主体画面占比之间取中，可被用户明确值或 PIN 覆盖。medium_shot 是候选值层面的启发式排序，不规定焦段、主体占比或画面透视，也不保证动作表达效果。仅在 composition.framing 为用户委托、未 PIN 且无 active Realization 时提议；用户已明确构图时不得覆盖。",
+  "content_hash": "94afb6e376cddb41130f9fe2b74b38c3a3f9509a7bf58deaa88c87fdca138669",
+  "keywords": [
+    "中景",
+    "站姿",
+    "行走",
+    "动作轮廓",
+    "棚拍",
+    "medium shot",
+    "standing",
+    "walking",
+    "studio"
+  ],
+  "knowledge_id": "composition.framing.medium_shot_for_standing_pose",
+  "review_status": "draft",
+  "reviewed_at": null,
+  "reviewer": null,
+  "source": {
+    "license": "internal-project-original",
+    "locator": "composition.framing.medium_shot_for_standing_pose",
+    "original_declaration": "由 v0.4 draft 规则收窄/改写而来的项目原创启发式提案，未复制任何第三方文本；作为待人工审核的 draft 交付，不声称已核实任何模型官方能力。",
+    "repository_path": "data/staging/rag_resources_20260916/knowledge_review/draft_proposals/composition.framing.medium_shot_for_standing_pose.v2.json",
+    "source_date": null,
+    "source_revision": "v0.5-draft-proposal-1",
+    "source_type": "project_original",
+    "title": "领域规则（保留提案）：棚内站姿动作的中景偏好（项目原创）",
+    "url": null
+  },
+  "target_models": [
+    "any"
+  ],
+  "version": "2"
+}

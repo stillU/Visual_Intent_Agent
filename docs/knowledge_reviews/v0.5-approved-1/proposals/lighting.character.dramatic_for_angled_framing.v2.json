@@ -1,0 +1,53 @@
+{
+  "aliases": [
+    "dramatic light",
+    "戏剧化照明"
+  ],
+  "applicable_path": "lighting.character",
+  "candidate_value": "dramatic",
+  "conditions": [
+    {
+      "operator": "equals",
+      "path": "camera.angle",
+      "values": [
+        "low_angle"
+      ]
+    },
+    {
+      "operator": "equals",
+      "path": "style.primary",
+      "values": [
+        "cinematic"
+      ]
+    }
+  ],
+  "content": "当相机角度被确认为 low_angle 且整体风格为 cinematic 时，照明质感优先选择 dramatic：这是项目对低角度电影感的默认偏好，用较强光比与方向感配合仰视的体量表达，可被用户明确值或 PIN 覆盖。角度本身不决定光比或主光方向，本规则不声称低角度必然戏剧光；dramatic 只是候选值层面的启发式，不代表必然获得戏剧化效果。仅在 lighting.character 为用户委托、未 PIN 且无 active Realization 时提议；用户明确光质时以用户值为准。",
+  "content_hash": "e367bd3046bb44909bfeae10cf5dbd7e6c90f2c07c61a2664fe0cdc75ba62697",
+  "keywords": [
+    "戏剧光",
+    "强光比",
+    "低角度",
+    "电影感",
+    "dramatic lighting",
+    "low angle"
+  ],
+  "knowledge_id": "lighting.character.dramatic_for_angled_framing",
+  "review_status": "draft",
+  "reviewed_at": null,
+  "reviewer": null,
+  "source": {
+    "license": "internal-project-original",
+    "locator": "lighting.character.dramatic_for_angled_framing",
+    "original_declaration": "由 v0.4 draft 规则收窄/改写而来的项目原创启发式提案，未复制任何第三方文本；作为待人工审核的 draft 交付，不声称已核实任何模型官方能力。",
+    "repository_path": "data/staging/rag_resources_20260916/knowledge_review/draft_proposals/lighting.character.dramatic_for_angled_framing.v2.json",
+    "source_date": null,
+    "source_revision": "v0.5-draft-proposal-1",
+    "source_type": "project_original",
+    "title": "领域规则（收窄提案）：低角度电影感的戏剧光偏好（项目原创）",
+    "url": null
+  },
+  "target_models": [
+    "any"
+  ],
+  "version": "2"
+}

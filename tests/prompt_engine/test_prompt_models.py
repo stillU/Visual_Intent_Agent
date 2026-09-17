@@ -36,6 +36,19 @@ def _binding(**overrides):
     return SourceBinding(**values)
 
 
+def _artifact(**overrides):
+    fields = {
+        "prompt_artifact_id": "pra_1",
+        "session_id": "ses_1",
+        "based_on_intent_revision_id": "irev_1",
+        "based_on_confirmation_id": "cnf_1",
+        "target_model": "qwen-image-3.0",
+        "prompt": "subject: a cat",
+    }
+    fields.update(overrides)
+    return PromptArtifact(**fields)
+
+
 def test_source_binding_has_exactly_the_frozen_fields():
     assert list(SourceBinding.model_fields) == [
         "clause_id",
@@ -64,6 +77,9 @@ def test_source_binding_defaults_are_none_and_frozen():
 def test_source_kinds_are_exactly_the_four_frozen_values():
     for kind in ("intent", "delegation", "realization", "runtime"):
         assert _binding(source_kind=kind).source_kind == kind
+    # 知识引用是诊断/追溯，不是新的授权来源类别。
+    with pytest.raises(ValidationError):
+        _binding(source_kind="knowledge")
 
 
 def test_prompt_parameters_expose_size_as_the_only_parameter_face():
@@ -87,6 +103,7 @@ def test_prompt_artifact_has_exactly_the_frozen_fields():
         "source_bindings",
         "realization_refs",
         "created_at",
+        "knowledge_bundle_refs",
     ]
 
 
@@ -107,6 +124,54 @@ def test_prompt_artifact_round_trips_and_keeps_traceable_ids():
     assert restored.parameters.size == "1024x1536"
     assert restored.source_bindings[0].intent_path == "subject.description"
     assert restored.realization_refs == ["rlz_1"]
+
+
+def test_prompt_artifact_knowledge_bundle_refs_default_to_empty_list():
+    artifact = _artifact()
+    assert artifact.knowledge_bundle_refs == []
+    assert artifact.model_config["extra"] == "forbid"
+    with pytest.raises(ValidationError):
+        _artifact(negative_prompt="low quality")
+
+
+def test_prompt_artifact_knowledge_bundle_refs_are_deduped_and_order_stable():
+    refs = ["kbu_b", "kbu_a", "kbu_b", "kbu_c", "kbu_a"]
+    artifact = _artifact(knowledge_bundle_refs=list(refs))
+    assert artifact.knowledge_bundle_refs == ["kbu_b", "kbu_a", "kbu_c"]
+    restored = PromptArtifact.model_validate_json(artifact.model_dump_json())
+    assert restored == artifact
+    assert restored.knowledge_bundle_refs == ["kbu_b", "kbu_a", "kbu_c"]
+
+
+@pytest.mark.parametrize("bad", ["", "   ", "\t"])
+def test_prompt_artifact_knowledge_bundle_refs_reject_blank_entries(bad):
+    with pytest.raises(ValidationError):
+        _artifact(knowledge_bundle_refs=[bad])
+    with pytest.raises(ValidationError):
+        _artifact(knowledge_bundle_refs=["kbu_x", bad])
+
+
+def test_prompt_artifact_knowledge_bundle_refs_defaults_are_not_shared():
+    first = _artifact(prompt_artifact_id="pra_1", prompt="subject: a cat")
+    second = _artifact(prompt_artifact_id="pra_2", prompt="subject: a dog")
+    first.knowledge_bundle_refs.append("kbu_x")
+    assert first.knowledge_bundle_refs == ["kbu_x"]
+    assert second.knowledge_bundle_refs == []
+
+
+def test_legacy_prompt_artifact_payload_without_knowledge_bundle_refs_is_readable():
+    legacy_json = (
+        '{"schema_version": "v1", "prompt_artifact_id": "pra_1", "session_id": "ses_1",'
+        ' "based_on_intent_revision_id": "irev_1",'
+        ' "based_on_confirmation_id": "cnf_1",'
+        ' "target_model": "qwen-image-3.0", "prompt": "subject: a cat",'
+        ' "parameters": {"size": "1024x1024"}, "source_bindings": [],'
+        ' "realization_refs": ["rlz_1"], "created_at": "2026-01-01T00:00:00+00:00"}'
+    )
+    artifact = PromptArtifact.model_validate_json(legacy_json)
+    assert artifact.knowledge_bundle_refs == []
+    assert artifact.realization_refs == ["rlz_1"]
+    assert PromptArtifact.model_validate_json(artifact.model_dump_json()) == artifact
 
 
 def test_prompt_artifact_created_at_is_tz_aware_utc_and_serialized_with_offset():

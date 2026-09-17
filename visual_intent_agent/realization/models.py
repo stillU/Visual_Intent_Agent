@@ -3,9 +3,15 @@
 冻结形状见 `docs/ARCHITECTURE.md` 第 4 节「Step 07 — prompt_engine + realization/models」：
 
     RealizationValue  path / value / source / first_prompt_artifact_id /
-                      carry_policy / status / invalidated_reason / invalidated_at
+                      carry_policy / status / invalidated_reason / invalidated_at /
+                      knowledge_bundle_id / knowledge_unit_id / knowledge_unit_version
     RealizationState  schema_version / realization_id / session_id /
                       based_on_intent_revision_id / values / created_at
+
+v0.4 Step 03 兼容扩展：`RealizationValue` 新增三个**可选**知识追溯字段
+（`knowledge_bundle_id` / `knowledge_unit_id` / `knowledge_unit_version`）。旧 payload
+缺省为 None 仍可读；三字段必须同时为非空字符串或全为 None。知识追溯只说明
+"为何选这个具体实现"，**不改变**授权 `source`（仍只能是 `user_delegated`）。
 
 本步骤**只建立模型与读写字段**。Realization 的 carry（跨 revision 继承）与失效评估
 （`evaluate_carry` / `CarryEvaluation`）属于 Step 09 的 `realization/carry.py`，本步不实现、
@@ -25,7 +31,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PlainSerializer
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+    model_validator,
+)
 
 from visual_intent_agent.domain.constants import SCHEMA_VERSION
 from visual_intent_agent.domain.identifiers import utc_now
@@ -87,7 +101,7 @@ _OptionalUtcDatetime = Annotated[
 class RealizationValue(BaseModel):
     """一个已实现的委托决策（一条路径一个值）。
 
-    字段面恰好 8 个（ARCHITECTURE.md 4「Step 07」）：
+    原有字段面 8 个（ARCHITECTURE.md 4「Step 07」）：
 
     - `path`：被委托的 Intent 路径（`domain.INTENT_PATHS` 之一）；
     - `value`：系统在**该路径局部范围内**确定的具体实现（不是新的 Intent 值）；
@@ -97,6 +111,13 @@ class RealizationValue(BaseModel):
     - `carry_policy`：默认 `preserve_until_invalidated`（Step 09 的评估口径）；
     - `status`：`active` / `invalidated`；只有 `active` 值会被 Step 07 复用；
     - `invalidated_reason` / `invalidated_at`：仅当 Step 09 置失效时填写。
+
+    v0.4 Step 03 追加 3 个**可选**知识追溯字段（兼容扩展，默认 None）：
+
+    - `knowledge_bundle_id` / `knowledge_unit_id` / `knowledge_unit_version`：记录
+      该具体实现由哪条已审核知识单元建议（经由哪个 `KnowledgeBundle`）。三字段
+      **必须同时为非空字符串或全为 None**，禁止半填写；旧 payload 缺省为 None。
+      这些字段只说明"为何选这个具体实现"，**不**构成用户授权，也不改变 `source`。
     """
 
     model_config = _FROZEN
@@ -111,6 +132,38 @@ class RealizationValue(BaseModel):
     status: Literal["active", "invalidated"] = REALIZATION_STATUS_ACTIVE
     invalidated_reason: str | None = None
     invalidated_at: _OptionalUtcDatetime = None
+    knowledge_bundle_id: str | None = None
+    knowledge_unit_id: str | None = None
+    knowledge_unit_version: str | None = None
+
+    @field_validator(
+        "knowledge_bundle_id", "knowledge_unit_id", "knowledge_unit_version"
+    )
+    @classmethod
+    def _knowledge_ref_shape(cls, value: str | None) -> str | None:
+        """单个知识追溯字段：None 或缺省保留；否则必须是非空字符串。"""
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                "knowledge provenance fields must be non-empty strings when present"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _knowledge_refs_triplet(self) -> "RealizationValue":
+        """知识三字段必须同时有效或全空（禁止半填写造成断链）。"""
+        present = (
+            self.knowledge_bundle_id is not None,
+            self.knowledge_unit_id is not None,
+            self.knowledge_unit_version is not None,
+        )
+        if len(set(present)) != 1:
+            raise ValueError(
+                "knowledge_bundle_id, knowledge_unit_id and knowledge_unit_version must "
+                "be provided together or all be None"
+            )
+        return self
 
 
 class RealizationState(BaseModel):

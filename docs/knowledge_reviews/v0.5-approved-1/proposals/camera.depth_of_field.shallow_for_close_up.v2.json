@@ -1,0 +1,54 @@
+{
+  "aliases": [
+    "shallow dof",
+    "浅景深效果"
+  ],
+  "applicable_path": "camera.depth_of_field",
+  "candidate_value": "shallow",
+  "conditions": [
+    {
+      "operator": "equals",
+      "path": "composition.framing",
+      "values": [
+        "close_up"
+      ]
+    },
+    {
+      "operator": "equals",
+      "path": "style.primary",
+      "values": [
+        "cinematic"
+      ]
+    }
+  ],
+  "content": "当构图被确认为 close_up 且风格为 cinematic 时，景深优先选择 shallow：这是项目对近景观感的默认偏好，用于隔离杂乱背景、集中主体视觉权重，可被用户明确值或 PIN 覆盖。浅景深只描述焦外虚化程度，不等于透视压缩，也不改变镜头焦段、视角或空间比例；本规则不声称 close_up 必然浅景深，也不承诺画质提升。仅在 camera.depth_of_field 为用户委托、未 PIN 且无 active Realization 时提议；用户需要环境可读时以用户值为准。",
+  "content_hash": "8124fdd97f82cded4e9dcfbb02e3a4c73c963aa48d19e7c2ba6db70b67d8a6e5",
+  "keywords": [
+    "浅景深",
+    "背景虚化",
+    "特写",
+    "主体隔离",
+    "shallow depth of field",
+    "bokeh",
+    "close-up"
+  ],
+  "knowledge_id": "camera.depth_of_field.shallow_for_close_up",
+  "review_status": "draft",
+  "reviewed_at": null,
+  "reviewer": null,
+  "source": {
+    "license": "internal-project-original",
+    "locator": "camera.depth_of_field.shallow_for_close_up",
+    "original_declaration": "由 v0.4 draft 规则收窄/改写而来的项目原创启发式提案，未复制任何第三方文本；作为待人工审核的 draft 交付，不声称已核实任何模型官方能力。",
+    "repository_path": "data/staging/rag_resources_20260916/knowledge_review/draft_proposals/camera.depth_of_field.shallow_for_close_up.v2.json",
+    "source_date": null,
+    "source_revision": "v0.5-draft-proposal-1",
+    "source_type": "project_original",
+    "title": "领域规则（收窄提案）：近景电影感的浅景深偏好（项目原创）",
+    "url": null
+  },
+  "target_models": [
+    "any"
+  ],
+  "version": "2"
+}

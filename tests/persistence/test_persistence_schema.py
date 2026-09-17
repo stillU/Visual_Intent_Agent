@@ -1,4 +1,4 @@
-"""Schema 与最小迁移测试：9 张表、user_version、外键、无 UPDATE 覆盖路径。"""
+"""Schema 与最小迁移测试：10 张表、user_version、外键、无 UPDATE 覆盖路径。"""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ EXPECTED_TABLES = {
     "prompt_artifacts",
     "generation_artifacts",
     "feedback_results",
+    "knowledge_bundles",
 }
 
 #: 只有 sessions 保存"当前指针"；其余全部 append-only（无 UPDATE 路径）。
@@ -41,21 +42,30 @@ def _user_tables(conn: sqlite3.Connection) -> set[str]:
     return {row[0] for row in rows}
 
 
-def test_schema_creates_exactly_the_nine_frozen_tables(repo) -> None:
+def test_schema_creates_exactly_the_ten_frozen_tables(repo) -> None:
     assert _user_tables(repo.connection) == EXPECTED_TABLES
 
 
-def test_knowledge_bundles_is_not_created(repo) -> None:
-    assert "knowledge_bundles" not in _user_tables(repo.connection)
+def test_knowledge_bundles_is_created_as_an_append_only_envelope(repo) -> None:
+    assert "knowledge_bundles" in _user_tables(repo.connection)
     schema = (PACKAGE_DIR / "schema.sql").read_text(encoding="utf-8")
-    assert not re.search(
-        r"CREATE\s+TABLE(\s+IF\s+NOT\s+EXISTS)?\s+knowledge_bundles", schema, flags=re.IGNORECASE
+    match = re.search(
+        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+knowledge_bundles\s*\((.*?)\);",
+        schema,
+        flags=re.IGNORECASE | re.DOTALL,
     )
+    assert match, "schema.sql must declare knowledge_bundles"
+    body = match.group(1)
+    assert re.search(r"\bbundle_id\s+TEXT\s+PRIMARY\s+KEY", body)
+    assert re.search(r"\bsession_id\s+TEXT\s+NOT\s+NULL\s+REFERENCES\s+sessions\(session_id\)", body)
+    assert re.search(r"\brefs_json\s+TEXT\s+NOT\s+NULL", body)
+    assert re.search(r"\bpayload\s+TEXT\s+NOT\s+NULL", body)
+    assert re.search(r"\bcreated_at\s+TEXT\s+NOT\s+NULL", body)
 
 
 def test_user_version_is_the_frozen_schema_version(repo) -> None:
     version = repo.connection.execute("PRAGMA user_version").fetchone()[0]
-    assert version == LATEST_SCHEMA_USER_VERSION == 1
+    assert version == LATEST_SCHEMA_USER_VERSION == 2
 
 
 def test_foreign_keys_are_enabled_on_every_connection(repo, db_path) -> None:
@@ -76,7 +86,7 @@ def test_migration_is_idempotent_and_preserves_data(db_path) -> None:
 
     second = SQLiteRepository(db_path)
     try:
-        assert second.connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert second.connection.execute("PRAGMA user_version").fetchone()[0] == 2
         assert _user_tables(second.connection) == EXPECTED_TABLES
         snapshot = second.get_current_session_snapshot("ses_0001")
         assert snapshot.current_intent_revision_id == "irev_0001"
@@ -85,7 +95,7 @@ def test_migration_is_idempotent_and_preserves_data(db_path) -> None:
         second.close()
 
 
-def test_apply_migrations_on_a_brand_new_file_sets_version_one(tmp_path) -> None:
+def test_apply_migrations_on_a_brand_new_file_sets_the_latest_version(tmp_path) -> None:
     conn = sqlite3.connect(tmp_path / "empty.db", isolation_level=None)
     try:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 0
@@ -136,6 +146,17 @@ def test_schema_sql_declares_every_frozen_ref_as_a_real_foreign_key() -> None:
     # refs 外键列的三种归属各出现一次以上（prompt / generation / feedback / realization）
     for table in ("intent_revisions", "confirmations", "prompt_artifacts", "generation_artifacts"):
         assert f"REFERENCES {table}(" in schema, table
+
+    # v2 knowledge_bundles 的精确三键 refs 各自是真外键
+    bundle_match = re.search(
+        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+knowledge_bundles\s*\((.*?)\);",
+        schema,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    assert bundle_match
+    bundle_body = bundle_match.group(1)
+    for column in ("intent_revision_id", "execution_revision_id", "confirmation_id"):
+        assert re.search(rf"\b{column}\s+TEXT\s+NOT\s+NULL\s+REFERENCES\s+\w+\(", bundle_body), column
 
 
 def test_memory_database_is_supported() -> None:

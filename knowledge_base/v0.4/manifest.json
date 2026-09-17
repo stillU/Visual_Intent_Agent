@@ -1,0 +1,23 @@
+{
+  "corpus_version": "v0.4-draft-1",
+  "files": [
+    {
+      "path": "camera.depth_of_field.jsonl",
+      "sha256": "8d1a0f64856ad4bd229d746a90f8eb102c22f45057a395a178e4fc82c5ffb002",
+      "unit_count": 3
+    },
+    {
+      "path": "composition.framing.jsonl",
+      "sha256": "0f4d3025768d15e7362cfea369978ae3178afb15d25ecd87364ec7975f20efb8",
+      "unit_count": 3
+    },
+    {
+      "path": "lighting.character.jsonl",
+      "sha256": "1924393f84417dfc27bf6e737d8d4882a05a9ef3b75c883cfaa4a555d342c8af",
+      "unit_count": 3
+    }
+  ],
+  "retrieval_version": "lexical.v1",
+  "schema_version": "knowledge.v1",
+  "tokenizer_version": "keyword.v1"
+}

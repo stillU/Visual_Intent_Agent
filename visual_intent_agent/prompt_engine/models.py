@@ -6,9 +6,13 @@
     PromptArtifact         schema_version / prompt_artifact_id / session_id /
                            based_on_intent_revision_id / based_on_confirmation_id /
                            target_model / prompt / parameters / source_bindings /
-                           realization_refs / created_at
+                           realization_refs / created_at / knowledge_bundle_refs
     PromptCompilationError 带 `.code`（`prompt.*` 命名空间，恰好四个冻结值）
     PromptCompileRequest   session_id / confirmation_id
+
+v0.4 Step 03 兼容扩展：`PromptArtifact` 新增可选 `knowledge_bundle_refs`（默认空
+列表）。旧 payload 不含该字段仍可读；refs 为非空字符串、去重且顺序稳定。该字段是
+诊断/追溯引用，**不**是新的授权来源（`SourceBinding.source_kind` 集合不变）。
 
 分层（README 不变量 7）：PromptArtifact 只引用 Intent revision / Confirmation /
 Realization 的 **ID**，绝不内嵌 Intent/Realization 对象；Prompt 文本不是生成结果
@@ -23,7 +27,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PlainSerializer
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    field_validator,
+)
 
 from visual_intent_agent.domain.constants import SCHEMA_VERSION
 from visual_intent_agent.domain.identifiers import utc_now
@@ -119,7 +130,10 @@ class PromptArtifact(BaseModel):
     - `prompt`：目标模型 Prompt 文本（**不是**生成结果）；
     - `parameters`：仅 `size`；
     - `source_bindings`：每个重要 clause 的来源；
-    - `realization_refs`：本次编译引用/产生的 RealizationState id（无则为空列表）。
+    - `realization_refs`：本次编译引用/产生的 RealizationState id（无则为空列表）；
+    - `knowledge_bundle_refs`（v0.4 Step 03 兼容扩展，默认空列表）：本次编译检索到的
+      诊断 Bundle 以及复用 Realization 实际使用的历史 Bundle id；非空字符串、去重且
+      顺序稳定。旧 payload 不含该字段仍可读；它不是授权来源。
     """
 
     model_config = _FROZEN
@@ -135,6 +149,21 @@ class PromptArtifact(BaseModel):
     source_bindings: list[SourceBinding] = Field(default_factory=list)
     realization_refs: list[str] = Field(default_factory=list)
     created_at: _UtcDatetime = Field(default_factory=utc_now)
+    knowledge_bundle_refs: list[str] = Field(default_factory=list)
+
+    @field_validator("knowledge_bundle_refs")
+    @classmethod
+    def _knowledge_bundle_refs_shape(cls, value: list[str]) -> list[str]:
+        """每个 ref 必须是非空字符串；按**首次出现顺序**稳定去重。"""
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for ref in value:
+            if not isinstance(ref, str) or not ref.strip():
+                raise ValueError("knowledge_bundle_refs must contain non-empty strings")
+            if ref not in seen:
+                seen.add(ref)
+                cleaned.append(ref)
+        return cleaned
 
 
 # ---------------------------------------------------------------------------

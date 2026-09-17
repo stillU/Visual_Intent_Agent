@@ -1,0 +1,147 @@
+{
+  "schema": "resource-handoff.v1",
+  "verified_on": "2026-09-16",
+  "purpose": "Resource preparation only; no formal evaluation or production knowledge approval",
+  "verification_note": "byte_verified resources were fetched in memory; no dataset archive has been imported into the workspace",
+  "datasets": [
+    {
+      "id": "geneval",
+      "official_url": "https://github.com/djghosh13/geneval",
+      "revision": "af4902f24d3ca90ebbb446dd9891a59e0f82725f",
+      "license": "MIT",
+      "license_url": "https://raw.githubusercontent.com/djghosh13/geneval/af4902f24d3ca90ebbb446dd9891a59e0f82725f/LICENSE",
+      "files": [
+        {
+          "path": "prompts/evaluation_metadata.jsonl",
+          "url": "https://raw.githubusercontent.com/djghosh13/geneval/af4902f24d3ca90ebbb446dd9891a59e0f82725f/prompts/evaluation_metadata.jsonl",
+          "status": "byte_verified",
+          "bytes": 85209,
+          "nonempty_rows": 553,
+          "sha256": "5c48e0813e812e3c373fa5c8ed07a8f0a483be30272b4427b0559c8048e67c13"
+        }
+      ]
+    },
+    {
+      "id": "t2i_compbench_original",
+      "official_url": "https://github.com/Karine-Huang/T2I-CompBench",
+      "revision": "4aa404212eb5d06e5adbcd9cee696c750d0d25a5",
+      "license": "MIT; bundled models have separate terms",
+      "license_url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/License.txt",
+      "notice_url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/NOTICE.md",
+      "files": [
+        {
+          "path": "examples/dataset/color_val.txt",
+          "url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/examples/dataset/color_val.txt",
+          "status": "byte_verified",
+          "bytes": 11871,
+          "nonempty_rows": 300,
+          "sha256": "1634259756dbc77d13093d907d414480080ec9790a8c97ad09efaea7b2534f2d"
+        },
+        {
+          "path": "examples/dataset/shape_val.txt",
+          "url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/examples/dataset/shape_val.txt",
+          "status": "byte_verified",
+          "bytes": 15935,
+          "nonempty_rows": 300,
+          "sha256": "37e1a276906c7ea9516cbd7ac8501be896006c0c17ca7344f260562834455bae"
+        },
+        {
+          "path": "examples/dataset/texture_val.txt",
+          "url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/examples/dataset/texture_val.txt",
+          "status": "byte_verified",
+          "bytes": 14211,
+          "nonempty_rows": 300,
+          "sha256": "fbb5363515b4a28009e360afaaaf389d2dd2289e50dbb0c6ef4ea0c7fe4f3d4f"
+        },
+        {
+          "path": "examples/dataset/spatial_val.txt",
+          "url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/examples/dataset/spatial_val.txt",
+          "status": "byte_verified",
+          "bytes": 9213,
+          "nonempty_rows": 300,
+          "sha256": "8707a1d7e42ce3002d95363cf55f74bd043c843ae27108f5125aaaa7840ca988"
+        },
+        {
+          "path": "examples/dataset/non_spatial_val.txt",
+          "url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/examples/dataset/non_spatial_val.txt",
+          "status": "byte_verified",
+          "bytes": 17750,
+          "nonempty_rows": 300,
+          "sha256": "04c56cc9ac441dc9ea6c5157652058bd1635b5308526dd31bb29a1caab9a758d"
+        },
+        {
+          "path": "examples/dataset/complex_val.txt",
+          "url": "https://raw.githubusercontent.com/Karine-Huang/T2I-CompBench/4aa404212eb5d06e5adbcd9cee696c750d0d25a5/examples/dataset/complex_val.txt",
+          "status": "byte_verified",
+          "bytes": 22724,
+          "nonempty_rows": 300,
+          "sha256": "1b808018b8d9916db3d47d5aa2ef18377a3549a56901a474156f799824cdf3b4"
+        }
+      ]
+    },
+    {
+      "id": "coco_cn",
+      "official_url": "https://github.com/li-xirong/coco-cn",
+      "revision": "2d8107987074b464a427c07433279de847947df1",
+      "license": "MIT stated by repository and dataset card; verify archive terms before use; images excluded",
+      "license_url": "https://raw.githubusercontent.com/li-xirong/coco-cn/2d8107987074b464a427c07433279de847947df1/LICENSE",
+      "hosting_url": "https://huggingface.co/datasets/AIMClab-RUC/COCO-CN",
+      "hosting_revision": "d40a7aac6fdfa88f5e30c0cd89516feaa8014739",
+      "files": [
+        {
+          "path": "coco-cn-version1805v1.1.tar.gz",
+          "url": "https://huggingface.co/datasets/AIMClab-RUC/COCO-CN/resolve/d40a7aac6fdfa88f5e30c0cd89516feaa8014739/coco-cn-version1805v1.1.tar.gz",
+          "status": "metadata_verified_archive_not_downloaded",
+          "bytes": null,
+          "nonempty_rows": null,
+          "sha256": null
+        }
+      ]
+    }
+  ],
+  "knowledge_sources": [
+    {
+      "id": "blender_cameras",
+      "url": "https://docs.blender.org/manual/en/4.5/render/cameras.html",
+      "revision": "manual 4.5; mutable page",
+      "status": "page_read",
+      "license": "CC BY-SA 4.0 or later, except noted exclusions",
+      "license_url": "https://docs.blender.org/manual/en/4.5/copyright.html",
+      "sha256": null
+    },
+    {
+      "id": "blender_lights",
+      "url": "https://docs.blender.org/manual/en/4.5/render/lights/light_object.html",
+      "revision": "manual 4.5; mutable page",
+      "status": "page_read",
+      "license": "CC BY-SA 4.0 or later, except noted exclusions",
+      "license_url": "https://docs.blender.org/manual/en/4.5/copyright.html",
+      "sha256": null
+    },
+    {
+      "id": "wikibooks_shot_sizes",
+      "url": "https://en.wikibooks.org/w/index.php?title=Movie_Making_Manual/Cinematography/Shot_Sizes&oldid=4313350",
+      "revision": "4313350",
+      "status": "page_read_exact_license_version_pending",
+      "license": "CC BY-SA; verify linked version and additional terms before copying",
+      "sha256": null
+    },
+    {
+      "id": "nikon_focal_length",
+      "url": "https://www.nikonusa.com/learn-and-explore/c/tips-and-techniques/understanding-focal-length",
+      "revision": null,
+      "status": "reference_only",
+      "license": "No open reuse license verified",
+      "sha256": null
+    },
+    {
+      "id": "qwen_image",
+      "url": "https://github.com/QwenLM/Qwen-Image",
+      "revision": "6b5e1f5cec987d404be5ac6657db3b9aacb56a89",
+      "status": "repository_reference_provider_alias_unresolved",
+      "license": "Apache-2.0 repository code; other artifacts require separate checks",
+      "license_url": "https://raw.githubusercontent.com/QwenLM/Qwen-Image/6b5e1f5cec987d404be5ac6657db3b9aacb56a89/LICENSE",
+      "sha256": null
+    }
+  ]
+}

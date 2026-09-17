@@ -1,0 +1,57 @@
+{
+  "aliases": [
+    "soft lighting",
+    "柔光光质",
+    "柔和照明"
+  ],
+  "applicable_path": "lighting.character",
+  "candidate_value": "soft",
+  "conditions": [
+    {
+      "operator": "in",
+      "path": "composition.framing",
+      "values": [
+        "close_up",
+        "medium_shot"
+      ]
+    },
+    {
+      "operator": "in",
+      "path": "environment.mode",
+      "values": [
+        "studio",
+        "indoor"
+      ]
+    }
+  ],
+  "content": "当构图被确认为 close_up 或 medium_shot 且环境为 studio 或 indoor 时，照明质感优先选择 soft：这是项目对近景表面过渡的默认偏好，可被用户明确值或 PIN 覆盖。光源尺寸与阴影软硬有关，但取景方式本身不决定光质，本规则不声称近景必然柔光；soft 只是候选值层面的启发式，不承诺皮肤、材质或画质改善。仅在 lighting.character 为用户委托、未 PIN 且无 active Realization 时提议；用户已明确光质或场景需要硬光时以用户值为准。",
+  "content_hash": "fc81f7f5077813e0daf4c5e784c020b97e19b92e0a191c1ae3bae46d5e90fbf2",
+  "keywords": [
+    "人像照明",
+    "柔光",
+    "近景",
+    "光比",
+    "portrait lighting",
+    "soft light",
+    "close-up"
+  ],
+  "knowledge_id": "lighting.character.soft_for_tight_framing",
+  "review_status": "draft",
+  "reviewed_at": null,
+  "reviewer": null,
+  "source": {
+    "license": "internal-project-original",
+    "locator": "lighting.character.soft_for_tight_framing",
+    "original_declaration": "由 v0.4 draft 规则收窄/改写而来的项目原创启发式提案，未复制任何第三方文本；作为待人工审核的 draft 交付，不声称已核实任何模型官方能力。",
+    "repository_path": "data/staging/rag_resources_20260916/knowledge_review/draft_proposals/lighting.character.soft_for_tight_framing.v2.json",
+    "source_date": null,
+    "source_revision": "v0.5-draft-proposal-1",
+    "source_type": "project_original",
+    "title": "领域规则（保留提案）：近景棚内/室内的柔光偏好（项目原创）",
+    "url": null
+  },
+  "target_models": [
+    "any"
+  ],
+  "version": "2"
+}

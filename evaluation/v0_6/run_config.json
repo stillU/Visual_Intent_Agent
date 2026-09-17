@@ -1,0 +1,180 @@
+{
+  "config_version": "bc_v0_6",
+  "protocol_version": "bc_protocol_v0_6",
+  "dataset_version": "bc_cases_v0_6",
+  "description": "MVP v0.6 B/C 对照（RAG 关闭 × 开启 v0.5-approved-1）的预注册运行配置。本批只做离线准备：real_run_authorized=false，不得调用真实服务、不得执行正式评测。",
+  "real_run_authorized": false,
+  "authorization": {
+    "gate": "G1",
+    "status": "not_granted",
+    "rule": "只有用户在 docs/handoffs/v0_6_launch_request.md 逐项确认代码/语料/协议身份、可追溯模型、费用与请求/重试上限、评审人与阈值后，才可把 real_run_authorized 改为 true 并运行正式批次；笼统“继续”不构成授权。",
+    "auto_commit_or_stash_forbidden": true,
+    "diagnostic_mode_is_not_formal_evidence": true
+  },
+  "arms": {
+    "B": {
+      "label": "rag_disabled",
+      "knowledge_engine": null,
+      "description": "同一修复后系统，不加载语料、不检索、不写 Bundle，委托路径只用确定性 select_delegated_value 回退。"
+    },
+    "C": {
+      "label": "rag_enabled_v0_5_approved_1",
+      "knowledge_engine": "LocalKnowledgeEngine",
+      "corpus_dir": "knowledge_base/v0.5",
+      "corpus_version": "v0.5-approved-1",
+      "corpus_fingerprint": "c961790c81d22e554672270b03a94474991a9f59315d0dab5585cc09610e81c4",
+      "description": "同一系统显式加载 v0.5-approved-1 语料（5 条 approved）。"
+    }
+  },
+  "knowledge_snapshot": {
+    "corpus_dir": "knowledge_base/v0.5",
+    "corpus_version": "v0.5-approved-1",
+    "corpus_fingerprint": "c961790c81d22e554672270b03a94474991a9f59315d0dab5585cc09610e81c4",
+    "approved_unit_count": 5,
+    "schema_version": "knowledge.v1",
+    "tokenizer_version": "keyword.v1",
+    "retrieval_version": "lexical.v1",
+    "manifest_sha256": "0bbeea9bbf7438bd8480e4cc56b1797368e2aa6b47c1601b0f276b44697b37d7",
+    "parent_snapshots_readonly": ["knowledge_base/v0.4"],
+    "coco_cn_included": false,
+    "coco_cn_license_status": "still_unconfirmed_unchanged_from_v0_5"
+  },
+  "dataset": {
+    "cases_path": "evaluation/v0_6/cases.jsonl",
+    "annotations_path": "evaluation/v0_6/annotations.jsonl",
+    "context_count": 30,
+    "layers": {
+      "L1_applicable": 18,
+      "L2_explicit_pin_control": 6,
+      "L3_no_hit_fallback": 6
+    },
+    "paths": [
+      "camera.depth_of_field",
+      "composition.framing",
+      "lighting.character"
+    ],
+    "project_original_only": true,
+    "development_pool_is_separate": true,
+    "development_pool_scan": ["tests/**", "evaluation/fixtures/**", "evaluation/annotations/**"],
+    "reserved_pool_excluded_from_scan": "evaluation/v0_6/",
+    "pin_control_rule": "PIN 只在路径已有值时成立（validation.pin_requires_existing_value）；PIN 控制为“已有确认显式值 + PIN”，可由合法 delta 序列 SET → PIN 构造，不存在 delegated+无值的 PIN 上下文。",
+    "overreach_visibility_required": "L2 控制（明确值与 PIN）的显式值必须不同于该上下文下被满足规则的知识候选，使任何越权改写都可见。",
+    "top_score_positive_semantics": "仅 adopted 为 true；no_hit/not_queried 无正分单元，必须为 null。",
+    "annotation_status": "pre_registered_pending_independent_review",
+    "contamination_risk_disclosed": true
+  },
+  "revision_seed_control": {
+    "policy": "Step 02 冻结 case_id+repetition 的确定性单次哈希映射（candidate-agnostic），B/C 两侧写入相同值的合法 intent_revision_id；相同 ID 仅在隔离库内存在，不跨库查询。",
+    "frozen_in_step_01": false,
+    "candidate_agnostic": true,
+    "reads_expected_candidate_or_knowledge_result": false,
+    "map_inputs": ["case_id", "repetition"],
+    "product_algorithm_mutation_forbidden": true,
+    "post_hoc_id_search_for_c_win_forbidden": true,
+    "value_separation_required": false,
+    "b_c_value_coincidence_allowed": true,
+    "applicable_prompt_may_be_identical": true,
+    "coincidence_handling": "当 C 采用的候选值与 B 的确定性回退值恰好相同，两侧 Prompt 可逐字相同；该对仍计入分母并按平局统计，不是偏离、不是失败、不得据此剔除或重跑。"
+  },
+  "image_seed_policy": {
+    "explicit_seed_pair": null,
+    "rule": "Provider 支持显式 seed 时 B/C 用相同预冻结 seed 对；不支持时按固定规则随机化每对调用顺序并披露非确定性限制；不得把 revision seed 当图片 seed，不得伪造 Provider 未返回的 seed。"
+  },
+  "repetitions": {
+    "independent_generations_per_case_per_arm": 2,
+    "base_image_requests": 120,
+    "max_attempts_formula": "120 * (1 + r)，r 为单次最大重试次数（待 G1 确认）",
+    "failures_remain_in_denominator": true
+  },
+  "budget": {
+    "status": "draft_pending_user_confirmation",
+    "currency": null,
+    "max_total_amount": null,
+    "max_requests": null,
+    "max_attempts": null,
+    "per_request_price_source": null,
+    "price_must_be_verified_at_launch": true,
+    "unknown_cost_requests_counted_as_consumed": true,
+    "connectivity_probe": {
+      "authorized": false,
+      "separate_scope_and_budget_required": true,
+      "outputs_not_formal_samples": true
+    }
+  },
+  "providers": {
+    "llm": {
+      "model_env": "VIA_LLM_MODEL",
+      "model_identity_verified": false,
+      "timeout_seconds": null,
+      "max_retries": null
+    },
+    "image": {
+      "model_env": "VIA_IMAGE_MODEL",
+      "model_default": "qwen-image-3.0",
+      "model_identity_verified": false,
+      "model_identity_note": "项目别名与实际模型版本的对应关系尚未核实；无法追溯版本时停止正式批次，不虚构映射。",
+      "size": "1024x1024",
+      "images_per_generation": 1,
+      "timeout_seconds": null,
+      "max_retries": null
+    }
+  },
+  "credentials": {
+    "rule": "真实值只存在于 api.md / .env；任何 Artifact、日志、记录、交付物中禁止明文密钥；API endpoint 需去除敏感查询参数。",
+    "values_recorded": false
+  },
+  "identity": {
+    "formal_requires_clean_worktree": true,
+    "requires_traceable_model_identity": true,
+    "requires_frozen_hashes_match": true,
+    "module": "evaluation/identity.py",
+    "current_head_note": "工作区 dirty 且未提交（HEAD b039b9b）；不得据 HEAD 掩盖未提交实现，也不得为变 clean 自动 commit/stash。"
+  },
+  "metrics": {
+    "primary": "blind_paired_preference_net_win_rate = (C_wins - B_wins) / completed_valid_two_image_pairs",
+    "ties_stay_in_denominator": true,
+    "report_absolute_wins_ties_losses": true,
+    "report_coverage_and_missing": true,
+    "constraint_compliance_reported_separately": true,
+    "required_engineering": [
+      "explicit_value_pin_confirmation_binding_immutable_history_violations = 0",
+      "B/C non-knowledge control variables identical",
+      "recommendation_vs_actual_adoption",
+      "prompt_coverage",
+      "end_to_end_and_retrieval_latency",
+      "actual_call_counts_and_known_cost",
+      "all_planned_pairs_and_failures_never_dropped_from_denominator"
+    ],
+    "intervals": "95% interval clustered by independent context; repeated images are not independent samples",
+    "stratified_reporting": ["L1_applicable", "L2_explicit_pin_control", "L3_no_hit_fallback"]
+  },
+  "thresholds": {
+    "status": "pending_user_confirmation_before_results",
+    "minimum_meaningful_gain": null,
+    "allowed_completion_rate_difference": null,
+    "max_latency_seconds": null,
+    "max_cost": null,
+    "rule": "未在看结果前确认阈值则不输出达标判定。"
+  },
+  "stop_conditions": [
+    "safety violation (explicit value / PIN / confirmation binding / immutable history)",
+    "identity or frozen-hash drift",
+    "budget or attempt cap reached",
+    "unknown-cost request that cannot be reconciled with the provider",
+    "task book requires review before further real calls"
+  ],
+  "forbidden_actions": [
+    "real network calls without G1 authorization",
+    "formal evaluation or blind review fabrication",
+    "auto commit / stash / push",
+    "modifying production corpus, domain contracts or v0.3/v0.5 frozen artifacts",
+    "renaming the legacy A/B runner as B/C",
+    "post-hoc sample removal or threshold changes to manufacture success"
+  ],
+  "offline_validation": {
+    "tool": "tools/validate_v0_6_cases.py",
+    "test": "tests/evaluation/test_v0_6_protocol_cases.py",
+    "network": "none",
+    "readonly": true
+  }
+}

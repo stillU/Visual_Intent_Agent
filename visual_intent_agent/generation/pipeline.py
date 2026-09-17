@@ -24,8 +24,10 @@
 失败语义（任务书 Workflow 规则 4；第 5.6 节）：
 
 - `ProviderError`：结构化日志 + transition FAILED，**不写任何 Artifact**，异常原样向上抛；
-- `PromptCompilationError` / 输出落盘失败 / 落库或迁移失败：同样转为 FAILED 并向上抛，
-  绝不停留在 GENERATING（GENERATING → FAILED 是已冻结迁移）；
+- `PromptCompilationError` / compile 内部 `RepositoryError`（Bundle / Realization /
+  Prompt 写入失败）/ 输出落盘失败 / 落库或迁移失败：同样转为 FAILED 并向上抛，
+  绝不停留在 GENERATING（GENERATING → FAILED 是已冻结迁移）；原错误 code 与异常
+  因果保留，写库失败绝不伪装成知识无命中；
 - 门禁失败（状态不对 / 无有效确认）：在 transition 之前拒绝，状态保持不变。
 
 边界（任务书「Adapter 边界」「禁止范围」）：
@@ -130,6 +132,16 @@ class GenerationPipeline:
                 session_id,
                 reason_code=exc.code,
                 detail=str(exc),
+            )
+            raise
+        except RepositoryError as exc:
+            # compile 内部的 Bundle / Realization / Prompt 写入失败：同样复用 FAILED
+            # 失败记录与迁移机制，绝不停留在 GENERATING。原 `persistence.*` code 与
+            # 异常因果原样保留（bare raise），不伪装成知识无命中或编译失败。
+            self._log_and_mark_failed(
+                session_id,
+                reason_code=exc.code,
+                detail="failed to persist compile output (knowledge bundle / realization / prompt)",
             )
             raise
         return self._generate_from_prompt_artifact(session_id, prompt_artifact)

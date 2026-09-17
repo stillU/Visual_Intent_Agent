@@ -1,6 +1,6 @@
-"""MVP v0.3 工程预览版：最小 CLI 入口（Step 08 提前实现，见 REVISION_002）。
+"""MVP v0.4 工程预览版：最小 CLI 入口（Step 08 起，v0.4 Step 04 增加 RAG 开关）。
 
-职责边界（任务书 08「实施内容」/「禁止范围」）：
+职责边界（任务书 08「实施内容」/「禁止范围」、v0.4 Step 04）：
 
 - **只做接线与交互**：复用 `Settings` / `SQLiteRepository` / `WorkflowService` /
   `ReviewService` / `GenerationPipeline` / `PromptEngine`；
@@ -11,6 +11,20 @@
   任何修改都会产生新 `IntentRevision` 并使旧确认天然失效，必须重新确认；
 - **不输出密钥**：不打印 `Settings`、`.env` 内容或 Authorization；只显示模型名、
   Revision / Artifact ID 与本地输出路径。
+
+v0.4 Step 04（`04_cli_acceptance.md`）在本模块内新增**可选、默认关闭**的本地 RAG：
+
+- `--rag` 显式开启；默认关闭时**完全不读取知识、不检索、不生成 Bundle**，旧流程逐字兼容；
+- `--knowledge-dir` 只接受本地目录，**拒绝任何远程 URL、不自动下载模型**；
+- 仅当开启 RAG 时才创建 `LocalKnowledgeEngine` 并注入 `PromptEngine`；若当前
+  `PromptEngine` 尚不支持注入（Step 03 未接入），CLI **明确报错退出**，绝不以
+  "无 RAG 继续运行"伪装启用成功；
+- 语料路径/格式/版本错误在启动时安全可见（非零退出码），不会伪装成启用成功；
+- 确认前展示"知识仅辅助明确委托项"，但**不改变确认哈希算法**；
+- 生成后只读展示本次采用/回退/复用、受影响路径与 Bundle/知识单元来源 ID；明确说明
+  这不代表用户确认过任何知识取值；
+- `--demo --rag` 使用本模块内置、明确标注为演示/测试的 approved 夹具语料，绝不冒充
+  生产人工审核或真实检索效果，也不修改 `knowledge_base/v0.4/` 的生产 draft。
 
 交互流程（任务书 08「最小用户流程」）：
 
@@ -25,15 +39,20 @@
   `FakeImageProvider`；演示逻辑只存在于本模块，属于预览版便利设施，不是产品能力，
   也不改变任何业务合同。
 
-本模块**不修改**其它模块（workflow / policy / evaluation / provider / generation）。
+本模块**不修改**其它模块（knowledge 核心 / workflow / policy / evaluation / provider /
+generation / PromptEngine / Repository / Realization 模型）。
 """
 
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import re
 import sys
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Protocol, Sequence
 
@@ -55,6 +74,26 @@ from visual_intent_agent.generation import (
 )
 from visual_intent_agent.intent_engine import IntentEngine, Interpreter
 from visual_intent_agent.intent_engine.models import InterpreterError
+from visual_intent_agent.knowledge import (
+    KNOWLEDGE_RETRIEVAL_VERSION,
+    KNOWLEDGE_SCHEMA_VERSION,
+    KNOWLEDGE_TOKENIZER_VERSION,
+    AdoptionOutcome,
+    BundleStatus,
+    KnowledgeAdoptionDecision,
+    KnowledgeBundle,
+    KnowledgeCorpus,
+    KnowledgeCorpusFile,
+    KnowledgeError,
+    KnowledgeManifest,
+    KnowledgeUnit,
+    LocalKnowledgeEngine,
+    RetrievalOutcome,
+    ReviewStatus,
+    SourceType,
+    compute_content_hash,
+    load_corpus,
+)
 from visual_intent_agent.persistence import (
     InvalidStateTransitionError,
     Repository,
@@ -75,6 +114,7 @@ from visual_intent_agent.providers.fake_image import FakeImageProvider
 from visual_intent_agent.providers.llm import LLMRequest, LLMResponse
 from visual_intent_agent.providers.openai_image import OpenAIImageProvider
 from visual_intent_agent.providers.openai_llm import OpenAICompatibleLLMProvider
+from visual_intent_agent.realization.models import RealizationState, RealizationValue
 from visual_intent_agent.workflow import (
     QuestionBuilder,
     SubmitMessageOutcome,
@@ -94,15 +134,39 @@ __all__ = [
     "SystemConsole",
     "main",
     "run_repl",
-    "build_demo_app",
     "build_app",
+    "build_demo_app",
+    "parse_args",
+    "build_knowledge_engine",
+    "build_demo_knowledge_corpus",
+    "resolve_knowledge_dir",
+    "render_knowledge_report",
+    "KnowledgeActivationError",
+    "KnowledgeReport",
+    "KnowledgeSourceInfo",
+    "DEFAULT_KNOWLEDGE_DIR",
     "RETRY_READY",
     "RETRY_NO_PROMPT",
     "RETRY_PROMPT_EXPIRED",
 ]
 
 #: 预览版标识（正式版本状态见 docs/releases/；本轮不声称正式发布）。
-CLI_VERSION = "visual-intent-agent MVP v0.3 engineering preview (not a formal release)"
+CLI_VERSION = (
+    "visual-intent-agent MVP v0.4 engineering preview "
+    "(optional local RAG, off by default; not a formal release)"
+)
+
+#: `--rag` 未给 `--knowledge-dir` 时的默认本地语料目录（生产 v0.4 语料，当前全 draft）。
+DEFAULT_KNOWLEDGE_DIR: Path = PROJECT_ROOT / "knowledge_base" / "v0.4"
+
+#: `--rag` 无法安全启用时的 CLI 稳定错误码（不伪装成功）。
+CLI_KNOWLEDGE_DIR_REMOTE = "cli.knowledge_dir_remote"
+CLI_KNOWLEDGE_DIR_INVALID = "cli.knowledge_dir_invalid"
+CLI_KNOWLEDGE_RAG_UNSUPPORTED = "cli.rag_unsupported"
+CLI_KNOWLEDGE_DEMO_CONFLICT = "cli.demo_knowledge_conflict"
+
+#: PromptEngine 注入 KnowledgeEngine 的候选 keyword-only 参数名（Step 03 合同）。
+_PROMPT_ENGINE_KNOWLEDGE_KWARGS: tuple[str, ...] = ("knowledge_engine", "knowledge")
 
 #: FAILED 重试的**只读预检查**结果（不是授权；底层 `GenerationPipeline.retry` 仍是唯一门禁）：
 #: 无已落库 Prompt / 历史 Prompt 绑定的确认已失效 / 可以复用同一 Prompt。
@@ -133,13 +197,283 @@ _HANDLED_ERRORS = (
     FeedbackError,
     InterpreterError,
     PromptCompilationError,
+    KnowledgeError,
 )
 
 _PREVIEW_BANNER = (
-    "Visual Intent Agent —— MVP v0.3 工程预览版（非正式发布）\n"
+    "Visual Intent Agent —— MVP v0.4 工程预览版（本地 RAG 可选、默认关闭；非正式发布）\n"
     "本预览版本轮未执行真实 smoke / 正式复评 / 人工盲评；只提供最小可操作闭环。\n"
+    "知识库尚未人工批准时，--rag 只验证工程链路，不代表知识质量或真实收益。\n"
     "输入 exit 可随时退出；反馈与澄清阶段不会自动确认。"
 )
+
+
+# ---------------------------------------------------------------------------
+# v0.4 Step 04：RAG 开关的错误/来源/展示数据（CLI 自有，不执行知识正文）
+# ---------------------------------------------------------------------------
+
+
+class KnowledgeActivationError(Exception):
+    """`--rag` 无法安全启用时抛出。
+
+    语义与 `KnowledgeError` 一致：**可见失败，绝不伪装启用成功**。`.code` 使用
+    `cli.*` 命名空间；调用方（`main`）会打印稳定 code、返回非零退出码，并且
+    不会退化成"无 RAG 静默继续"。
+    """
+
+    def __init__(self, code: str, message: str) -> None:
+        self.code = code
+        self.message = message
+        super().__init__(message)
+
+    def __str__(self) -> str:  # pragma: no cover - 便于统一渲染
+        return self.message
+
+
+@dataclass(frozen=True)
+class KnowledgeSourceInfo:
+    """本次启用的是**哪一个本地语料**（只读展示；不是授权，也不声称审核真实性）。"""
+
+    label: str
+    path: str | None
+    corpus_version: str
+    all_unit_count: int
+    approved_unit_count: int
+    is_demo: bool
+
+
+@dataclass(frozen=True)
+class KnowledgeReport:
+    """生成后只读的"知识使用情况"快照（不含正文、不改状态、不构成授权）。
+
+    - `adopted`：本次编译新采用的、带知识来源的 active Realization 值；
+    - `reused`：本次编译**复用**的、来自历史编译的带知识来源 active 值；
+    - `fallback_notes`：检索未采用/语料诊断的可读原因；
+    - `bundles`：PromptArtifact 引用到的 Bundle 快照（含历史复用 Bundle）。
+    """
+
+    prompt_artifact_id: str | None
+    source: KnowledgeSourceInfo
+    bundles: tuple[KnowledgeBundle, ...] = ()
+    adopted: tuple[RealizationValue, ...] = ()
+    reused: tuple[RealizationValue, ...] = ()
+    #: 编译器对检索推荐的最终裁定（持久化在 Bundle 内；旧 Bundle 可能为空）。
+    adoption_decisions: tuple[KnowledgeAdoptionDecision, ...] = ()
+    fallback_notes: tuple[str, ...] = ()
+    note: str | None = None
+
+
+#: `KnowledgeActivationError` 在 REPL 内也应给出可读提示（类定义之后才能加入）。
+_HANDLED_ERRORS = _HANDLED_ERRORS + (KnowledgeActivationError,)
+
+
+# ---------------------------------------------------------------------------
+# v0.4 Step 04：本地知识语料的启用（默认关闭；拒绝远程链接）
+# ---------------------------------------------------------------------------
+
+#: 明确标注为演示/测试的 CLI 内置 approved 夹具（非生产审核、非真实检索效果）。
+DEMO_KNOWLEDGE_CORPUS_VERSION = "v0.4-demo-1"
+_DEMO_KNOWLEDGE_FILE = "demo.approved.jsonl"
+_DEMO_KNOWLEDGE_REVIEWER = "cli-demo-fixture-not-a-human-review"
+_DEMO_KNOWLEDGE_REVIEWED_AT = datetime(2026, 9, 16, tzinfo=timezone.utc)
+_DEMO_KNOWLEDGE_SOURCE: dict[str, Any] = {
+    "source_type": SourceType.PROJECT_ORIGINAL.value,
+    "title": "CLI demo fixture (non-production; not a human review)",
+    "repository_path": "visual_intent_agent/cli.py",
+    "locator": "build_demo_knowledge_corpus() embedded fixture",
+    "source_revision": DEMO_KNOWLEDGE_CORPUS_VERSION,
+    "original_declaration": (
+        "Project-original deterministic CLI demo/test fixture. NOT production-reviewed "
+        "knowledge and NOT evidence of retrieval or image quality."
+    ),
+}
+
+#: 三条演示单元：与 `_DemoLLM` 的确定性剧本配套（棚拍 / 写实场景）。
+_DEMO_KNOWLEDGE_SPECS: tuple[dict[str, Any], ...] = (
+    {
+        "knowledge_id": "demo.lighting.character.soft",
+        "version": "v1",
+        "content": "演示夹具：棚拍写实场景下，被委托的光线方向宜取柔和光以保持稳定观感。",
+        "applicable_path": "lighting.character",
+        "candidate_value": "soft",
+        "keywords": ("photorealistic", "studio", "soft lighting"),
+        "aliases": ("柔光", "soft"),
+        "target_models": ("any",),
+    },
+    {
+        "knowledge_id": "demo.composition.framing.medium_shot",
+        "version": "v1",
+        "content": "演示夹具：棚拍写实场景下，构图上中景通常比极端景别更稳妥。",
+        "applicable_path": "composition.framing",
+        "candidate_value": "medium_shot",
+        "keywords": ("photorealistic", "studio", "medium shot"),
+        "aliases": ("中景",),
+        "target_models": ("any",),
+    },
+    {
+        "knowledge_id": "demo.camera.depth_of_field.shallow",
+        "version": "v1",
+        "content": "演示夹具：棚拍写实人像可用浅景深突出主体，但这是场景相关建议而非通则。",
+        "applicable_path": "camera.depth_of_field",
+        "candidate_value": "shallow",
+        "keywords": ("photorealistic", "depth of field", "shallow"),
+        "aliases": ("浅景深",),
+        "target_models": ("any",),
+    },
+)
+
+_DEMO_CORPUS_CACHE: KnowledgeCorpus | None = None
+
+
+def build_demo_knowledge_corpus() -> KnowledgeCorpus:
+    """构造 CLI 内置的**演示/测试** approved 语料（内存、确定性、不写磁盘）。
+
+    这不是生产知识库，也不修改 `knowledge_base/v0.4/` 的 9 条 draft；`reviewer` 字段
+    明确写着"not-a-human-review"，绝不被当作人工审核证据。
+    """
+    global _DEMO_CORPUS_CACHE
+    if _DEMO_CORPUS_CACHE is not None:
+        return _DEMO_CORPUS_CACHE
+    units: list[KnowledgeUnit] = []
+    for spec in _DEMO_KNOWLEDGE_SPECS:
+        payload = dict(spec)
+        payload["content_hash"] = compute_content_hash(payload["content"])
+        payload["source"] = dict(_DEMO_KNOWLEDGE_SOURCE)
+        payload["review_status"] = ReviewStatus.APPROVED.value
+        payload["reviewer"] = _DEMO_KNOWLEDGE_REVIEWER
+        payload["reviewed_at"] = _DEMO_KNOWLEDGE_REVIEWED_AT
+        units.append(KnowledgeUnit.model_validate(payload))
+    jsonl = (
+        "\n".join(
+            json.dumps(unit.model_dump(mode="json"), ensure_ascii=False, sort_keys=True)
+            for unit in units
+        )
+        + "\n"
+    )
+    manifest = KnowledgeManifest(
+        schema_version=KNOWLEDGE_SCHEMA_VERSION,
+        corpus_version=DEMO_KNOWLEDGE_CORPUS_VERSION,
+        tokenizer_version=KNOWLEDGE_TOKENIZER_VERSION,
+        retrieval_version=KNOWLEDGE_RETRIEVAL_VERSION,
+        files=(
+            KnowledgeCorpusFile(
+                path=_DEMO_KNOWLEDGE_FILE,
+                sha256=sha256(jsonl.encode("utf-8")).hexdigest(),
+                unit_count=len(units),
+            ),
+        ),
+    )
+    _DEMO_CORPUS_CACHE = KnowledgeCorpus(manifest=manifest, all_units=tuple(units))
+    return _DEMO_CORPUS_CACHE
+
+
+def _looks_remote(raw: str) -> bool:
+    """URL/远程入口判定：任何 `scheme://` 或已知远程 scheme 前缀都拒绝。"""
+    lowered = raw.strip().lower()
+    if "://" in lowered:
+        return True
+    return lowered.startswith(
+        ("http:", "https:", "ftp:", "ftps:", "sftp:", "s3:", "gs:", "ssh:")
+    )
+
+
+def resolve_knowledge_dir(
+    raw: str | None, *, default: Path = DEFAULT_KNOWLEDGE_DIR
+) -> Path:
+    """把 `--knowledge-dir` 规范为**本地**目录（拒绝远程 URL；不联网、不下载）。"""
+    if raw is None:
+        return Path(default)
+    text = raw.strip()
+    if not text:
+        raise KnowledgeActivationError(
+            CLI_KNOWLEDGE_DIR_INVALID, "--knowledge-dir 需要非空本地目录路径"
+        )
+    if _looks_remote(text):
+        raise KnowledgeActivationError(
+            CLI_KNOWLEDGE_DIR_REMOTE,
+            f"--knowledge-dir 只接受本地目录，拒绝远程 URL/入口 {text!r}；"
+            "本版不读取任意远程链接，也不自动下载模型或语料",
+        )
+    return Path(text).expanduser()
+
+
+def build_knowledge_engine(
+    *, knowledge_dir: str | None, demo: bool
+) -> tuple[LocalKnowledgeEngine, KnowledgeSourceInfo]:
+    """启用 RAG 时构造 `LocalKnowledgeEngine` 与只读来源信息。
+
+    - 生产/测试本地目录：**启动时**完整校验加载；路径/格式/版本错误立即抛出
+      `KnowledgeError`/`KnowledgeActivationError`，绝不退化为"无 RAG 静默继续"；
+    - `--demo`：只用内置演示/测试夹具，且拒绝 `--knowledge-dir`（避免拿未标注的
+      外部目录冒充演示 approved 数据）。
+    """
+    if demo:
+        if knowledge_dir is not None:
+            raise KnowledgeActivationError(
+                CLI_KNOWLEDGE_DEMO_CONFLICT,
+                "--demo --rag 使用内置演示/测试 approved 夹具，不能同时指定 "
+                "--knowledge-dir；如需使用本地语料，请去掉 --demo 改用真实模式",
+            )
+        corpus = build_demo_knowledge_corpus()
+        info = KnowledgeSourceInfo(
+            label="内置演示/测试 approved 夹具（非生产审核，不代表真实检索效果）",
+            path=None,
+            corpus_version=corpus.corpus_version,
+            all_unit_count=corpus.all_unit_count,
+            approved_unit_count=len(corpus.build_units()),
+            is_demo=True,
+        )
+        return LocalKnowledgeEngine(corpus=corpus), info
+
+    path = resolve_knowledge_dir(knowledge_dir)
+    if not path.is_dir():
+        raise KnowledgeActivationError(
+            CLI_KNOWLEDGE_DIR_INVALID,
+            f"--knowledge-dir {path} 不是已存在的本地目录",
+        )
+    corpus = load_corpus(path)
+    info = KnowledgeSourceInfo(
+        label=f"本地审核语料目录 {path}",
+        path=str(path),
+        corpus_version=corpus.corpus_version,
+        all_unit_count=corpus.all_unit_count,
+        approved_unit_count=len(corpus.build_units()),
+        is_demo=False,
+    )
+    return LocalKnowledgeEngine(corpus=corpus), info
+
+
+def _knowledge_engine_kwarg(engine_cls: type) -> str | None:
+    """探测 `PromptEngine.__init__` 是否支持注入 KnowledgeEngine（Step 03 合同）。"""
+    try:
+        parameters = inspect.signature(engine_cls.__init__).parameters
+    except (TypeError, ValueError):  # pragma: no cover - 内建/扩展对象
+        return None
+    for name in _PROMPT_ENGINE_KNOWLEDGE_KWARGS:
+        if name in parameters:
+            return name
+    return None
+
+
+def build_prompt_engine(
+    repo: Repository, *, knowledge_engine: Any | None = None
+) -> PromptEngine:
+    """构造 `PromptEngine`；仅当 RAG 开启时才注入 KnowledgeEngine。
+
+    当前 `PromptEngine` 尚未接入注入参数时**明确失败**：CLI 绝不以"无 RAG 继续运行"
+    伪装 `--rag` 已生效。
+    """
+    renderer = QwenImageRenderer()
+    if knowledge_engine is None:
+        return PromptEngine(renderer, repo)
+    kwarg = _knowledge_engine_kwarg(PromptEngine)
+    if kwarg is None:
+        raise KnowledgeActivationError(
+            CLI_KNOWLEDGE_RAG_UNSUPPORTED,
+            "当前 PromptEngine 构造不支持注入 KnowledgeEngine（Step 03 尚未接入）；"
+            "--rag 未启用，且不会以无 RAG 静默继续",
+        )
+    return PromptEngine(renderer, repo, **{kwarg: knowledge_engine})
 
 
 # ---------------------------------------------------------------------------
@@ -190,12 +524,14 @@ class SessionApp:
         review: ReviewService,
         pipeline: GenerationPipeline,
         settings: Settings,
+        knowledge_source: KnowledgeSourceInfo | None = None,
     ) -> None:
         self._repo = repo
         self._workflow = workflow
         self._review = review
         self._pipeline = pipeline
         self._settings = settings
+        self._knowledge_source = knowledge_source
 
     # -- 构造 ---------------------------------------------------------------
 
@@ -206,6 +542,8 @@ class SessionApp:
         *,
         db_path: Path | str | None = None,
         output_dir: Path | str | None = None,
+        knowledge_engine: Any | None = None,
+        knowledge_source: KnowledgeSourceInfo | None = None,
     ) -> "SessionApp":
         """真实模式：真实 LLM / 图像 adapter + `Settings` 中的路径。"""
         return cls._assemble(
@@ -214,6 +552,8 @@ class SessionApp:
             llm=OpenAICompatibleLLMProvider(settings),
             image=OpenAIImageProvider(settings),
             output_dir=Path(output_dir) if output_dir is not None else settings.output_dir,
+            knowledge_engine=knowledge_engine,
+            knowledge_source=knowledge_source,
         )
 
     @classmethod
@@ -225,6 +565,8 @@ class SessionApp:
         llm: Any,
         image: Any,
         output_dir: Path,
+        knowledge_engine: Any | None = None,
+        knowledge_source: KnowledgeSourceInfo | None = None,
     ) -> "SessionApp":
         workflow = WorkflowService(
             repo=repo,
@@ -239,7 +581,7 @@ class SessionApp:
         )
         pipeline = GenerationPipeline(
             repo=repo,
-            prompt_engine=PromptEngine(QwenImageRenderer(), repo),
+            prompt_engine=build_prompt_engine(repo, knowledge_engine=knowledge_engine),
             image_provider=image,
             output_dir=output_dir,
         )
@@ -249,6 +591,7 @@ class SessionApp:
             review=review,
             pipeline=pipeline,
             settings=settings,
+            knowledge_source=knowledge_source,
         )
 
     # -- 用例（直接转发；错误语义由既有服务决定）----------------------------
@@ -375,6 +718,103 @@ class SessionApp:
     def target_model(self) -> str:
         return self._settings.image_model
 
+    @property
+    def rag_enabled(self) -> bool:
+        return self._knowledge_source is not None
+
+    @property
+    def knowledge_source(self) -> KnowledgeSourceInfo | None:
+        return self._knowledge_source
+
+    def knowledge_report(
+        self, session_id: str, *, prompt_artifact_id: str | None = None
+    ) -> KnowledgeReport | None:
+        """只读解析最新 `PromptArtifact` + 引用的 Bundle + active Realization。
+
+        RAG 未开启时返回 `None`（不读取任何知识相关记录）。本方法只读、不写状态、
+        不调用检索；即使 `PromptEngine` 尚未写入追溯字段也如实显示"未记录 Bundle"。
+        """
+        if self._knowledge_source is None:
+            return None
+        artifact: PromptArtifact | None = None
+        if prompt_artifact_id is not None:
+            artifact = PromptArtifact.model_validate_json(
+                self._repo.get_prompt_artifact(prompt_artifact_id).payload
+            )
+        else:
+            stored = self._repo.get_latest_prompt_artifact(session_id)
+            if stored is not None:
+                artifact = PromptArtifact.model_validate_json(stored.payload)
+
+        bundles: list[KnowledgeBundle] = []
+        if artifact is not None:
+            for ref in artifact.knowledge_bundle_refs:
+                try:
+                    bundles.append(
+                        KnowledgeBundle.model_validate_json(
+                            self._repo.get_knowledge_bundle(ref).payload
+                        )
+                    )
+                except RepositoryError:
+                    # 只读展示：缺失引用如实跳过，绝不编造来源。
+                    continue
+
+        fallback_notes: list[str] = []
+        decisions: list[KnowledgeAdoptionDecision] = []
+        for bundle in bundles:
+            decisions.extend(bundle.adoption_decisions)
+            if bundle.status is not BundleStatus.OK:
+                fallback_notes.append(
+                    f"bundle {bundle.bundle_id}: {bundle.status.value}"
+                    f"（{bundle.reason_code or 'no_reason'}）"
+                )
+                continue
+            for result in bundle.path_results:
+                if result.outcome is not RetrievalOutcome.ADOPTED:
+                    fallback_notes.append(
+                        f"{result.path}: {result.outcome.value}（{result.reason_code}）"
+                    )
+            # 编译器实际裁定：明确区分"检索器推荐"与"编译器采用/拒绝"。
+            for decision in bundle.adoption_decisions:
+                if decision.outcome is AdoptionOutcome.REJECTED:
+                    fallback_notes.append(
+                        f"{decision.path}: 编译复核拒绝推荐 {decision.candidate_value!r}"
+                        f"（{decision.reason_code.value if decision.reason_code else 'rejected'}）"
+                    )
+
+        adopted: list[RealizationValue] = []
+        reused: list[RealizationValue] = []
+        state_stored = self._repo.get_current_realization_state(session_id)
+        if state_stored is not None:
+            state = RealizationState.model_validate_json(state_stored.payload)
+            for value in state.active_values():
+                if value.knowledge_unit_id is None:
+                    continue
+                if (
+                    artifact is not None
+                    and value.first_prompt_artifact_id == artifact.prompt_artifact_id
+                ):
+                    adopted.append(value)
+                else:
+                    reused.append(value)
+
+        note = None
+        if not bundles:
+            note = (
+                "本次编译未记录任何知识 Bundle：没有采用知识"
+                "（可能未产生检索，或知识追溯字段尚不可用）。"
+            )
+        return KnowledgeReport(
+            prompt_artifact_id=None if artifact is None else artifact.prompt_artifact_id,
+            source=self._knowledge_source,
+            bundles=tuple(bundles),
+            adopted=tuple(adopted),
+            reused=tuple(reused),
+            adoption_decisions=tuple(decisions),
+            fallback_notes=tuple(fallback_notes),
+            note=note,
+        )
+
 
 # ---------------------------------------------------------------------------
 # 渲染
@@ -401,8 +841,14 @@ def render_issues(console: Console, issues: Sequence[Issue]) -> None:
         console.print(f"  - [{issue.severity.value}] {issue.code}{location}: {issue.message}")
 
 
-def render_summary(console: Console, summary: ConfirmationSummary) -> None:
-    """diff-first 确认摘要（六要素；只读展示，不代替用户确认）。"""
+def render_summary(
+    console: Console, summary: ConfirmationSummary, *, rag_enabled: bool = False
+) -> None:
+    """diff-first 确认摘要（六要素；只读展示，不代替用户确认）。
+
+    `rag_enabled` 只追加一行**说明文字**：确认哈希算法与摘要内容不变，用户确认的
+    仍是这里展示的 Intent 与委托范围，而不是任何知识取值。
+    """
     console.print("")
     console.print("—— 确认摘要（diff-first）——")
     change = summary.change_summary
@@ -436,6 +882,11 @@ def render_summary(console: Console, summary: ConfirmationSummary) -> None:
         if value is not None:
             console.print(f"  - {path} = {value!r}")
     console.print(f"摘要哈希: {compute_summary_hash(summary)[:16]}…")
+    if rag_enabled:
+        console.print(
+            "知识说明: 知识仅辅助明确委托项；用户确认的是以上 Intent 与委托范围，"
+            "具体实现由系统在该范围内决定，知识不会覆盖用户指定值或 PIN。"
+        )
 
 
 def _known_paths() -> tuple[str, ...]:
@@ -444,8 +895,16 @@ def _known_paths() -> tuple[str, ...]:
     return tuple(sorted(INTENT_PATHS))
 
 
-def render_generation(console: Console, artifact: GenerationArtifact) -> None:
-    """展示生成文件路径与 Artifact ID（不输出任何凭据）。"""
+def render_generation(
+    console: Console,
+    artifact: GenerationArtifact,
+    *,
+    knowledge_report: KnowledgeReport | None = None,
+) -> None:
+    """展示生成文件路径与 Artifact ID（不输出任何凭据）。
+
+    `knowledge_report` 非空时追加只读的"知识使用情况"；内容不改变生成结果。
+    """
     console.print("")
     console.print("—— 生成结果 ——")
     console.print(f"generation_id: {artifact.generation_id}")
@@ -455,6 +914,76 @@ def render_generation(console: Console, artifact: GenerationArtifact) -> None:
     for ref in artifact.output_refs:
         local = (Path(PROJECT_ROOT) / ref.path).resolve()
         console.print(f"输出文件: {local}  ({ref.mime_type}, {ref.byte_size} bytes)")
+    if knowledge_report is not None:
+        render_knowledge_report(console, knowledge_report)
+
+
+def render_knowledge_report(console: Console, report: KnowledgeReport) -> None:
+    """只读展示本次采用/回退/复用、路径与 Bundle/知识来源 ID。
+
+    明确声明：这不代表用户确认过任何具体知识取值，也不占用任何授权来源。
+    """
+    console.print("")
+    console.print("—— 知识使用情况（RAG 已开启）——")
+    console.print(
+        "说明: 以下知识仅辅助被明确委托的项，不代表用户确认过任何知识取值，"
+        "也不改变用户确认的 Intent；完整来源可按 bundle_id 从 Repository 查回。"
+    )
+    source = report.source
+    console.print(f"知识来源: {source.label}")
+    console.print(
+        f"语料版本: {source.corpus_version}"
+        f"（approved {source.approved_unit_count}/{source.all_unit_count} 条）"
+    )
+    if report.note:
+        console.print(f"提示: {report.note}")
+    if report.adopted:
+        console.print("本次采用 (adopted):")
+        for value in report.adopted:
+            console.print(
+                f"  - {value.path} = {value.value!r}  ← {value.knowledge_unit_id} "
+                f"({value.knowledge_unit_version}, bundle={value.knowledge_bundle_id})"
+            )
+    else:
+        console.print("本次采用 (adopted): （无）")
+    if report.reused:
+        console.print("复用已有实现 (reused，来自历史编译):")
+        for value in report.reused:
+            console.print(
+                f"  - {value.path} = {value.value!r}  ← {value.knowledge_unit_id} "
+                f"({value.knowledge_unit_version}, bundle={value.knowledge_bundle_id})"
+            )
+    if report.fallback_notes:
+        console.print("回退 (fallback):")
+        for note in report.fallback_notes:
+            console.print(f"  - {note}")
+    elif not report.adopted and not report.reused:
+        console.print("回退 (fallback): 本次没有采用任何知识；与无 RAG 的固定候选回退一致。")
+    if report.bundles:
+        console.print("Bundle / 来源 ID:")
+        for bundle in report.bundles:
+            fingerprint = bundle.corpus_fingerprint or "n/a"
+            console.print(
+                f"  - {bundle.bundle_id}  status={bundle.status.value} "
+                f"corpus={bundle.corpus_version or 'n/a'} fingerprint={fingerprint[:12]}…"
+            )
+            for recommendation in bundle.recommendations:
+                # 只报告"检索器推荐了什么"，并附上持久化的编译器裁定：
+                # adopted 才算实际采用；rejected/无记录绝不显示成 adopted。
+                decision = bundle.decision_for(recommendation.path)
+                if decision is None:
+                    verdict = "编译器未记录裁定（旧 Bundle，不作为已采用）"
+                elif decision.outcome is AdoptionOutcome.ADOPTED:
+                    verdict = "编译器已采用 (adopted)"
+                else:
+                    code = decision.reason_code.value if decision.reason_code else "rejected"
+                    verdict = f"编译器未采用 (rejected: {code})"
+                console.print(
+                    f"      · [检索器推荐] {recommendation.path} = "
+                    f"{recommendation.candidate_value!r}"
+                    f"  ← {recommendation.knowledge_id} ({recommendation.version}, "
+                    f"score={recommendation.score:.2f}) — {verdict}"
+                )
 
 
 def render_error(console: Console, exc: BaseException) -> None:
@@ -517,6 +1046,13 @@ def _error_hint(exc: BaseException) -> str | None:
         return "持久化失败；请检查 --db 路径是否可写。"
     if isinstance(exc, FeedbackError):
         return "反馈上下文不一致；请重试或重新开始会话。"
+    if isinstance(exc, KnowledgeActivationError) or (
+        isinstance(code, str) and code.startswith("knowledge.")
+    ):
+        return (
+            "本地知识语料未启用（--rag 未生效）：请修正 --knowledge-dir 指向的本地目录，"
+            "或移除 --rag；不会以无 RAG 静默继续。"
+        )
     return None
 
 
@@ -618,7 +1154,7 @@ def run_repl(app: SessionApp, console: Console) -> int:
             except _HANDLED_ERRORS as exc:
                 render_error(console, exc)
                 continue
-            render_summary(console, summary)
+            render_summary(console, summary, rag_enabled=app.rag_enabled)
             text = console.prompt("确认并生成? [y/N]（或输入修改 / exit）: ")
             token = _norm(text)
             if token in EXIT_TOKENS:
@@ -637,7 +1173,13 @@ def run_repl(app: SessionApp, console: Console) -> int:
                     render_error(console, exc)
                     continue
                 console.print("已确认并生成。")
-                render_generation(console, artifact)
+                render_generation(
+                    console,
+                    artifact,
+                    knowledge_report=app.knowledge_report(
+                        session_id, prompt_artifact_id=artifact.prompt_artifact_id
+                    ),
+                )
                 question_text = None
                 failed_text = None
             else:
@@ -664,7 +1206,13 @@ def run_repl(app: SessionApp, console: Console) -> int:
         if state is WorkflowState.WAITING_REVIEW:
             artifact = app.latest_generation(session_id)
             if artifact is not None:
-                render_generation(console, artifact)
+                render_generation(
+                    console,
+                    artifact,
+                    knowledge_report=app.knowledge_report(
+                        session_id, prompt_artifact_id=artifact.prompt_artifact_id
+                    ),
+                )
             console.print('可输入：修改反馈原文；"accept" 表示接受；retry 重发上一条。')
             text = console.prompt("反馈 (accept=接受, retry=重发, exit=退出): ")
             token = _norm(text)
@@ -727,7 +1275,13 @@ def run_repl(app: SessionApp, console: Console) -> int:
                 render_error(console, exc)
                 continue
             console.print("已用同一 PromptArtifact 重新生成。")
-            render_generation(console, artifact)
+            render_generation(
+                console,
+                artifact,
+                knowledge_report=app.knowledge_report(
+                    session_id, prompt_artifact_id=artifact.prompt_artifact_id
+                ),
+            )
             continue
 
         if state is WorkflowState.COMPLETED:
@@ -965,17 +1519,47 @@ def build_app(
     *,
     db_path: Path | str | None = None,
     output_dir: Path | str | None = None,
+    rag: bool = False,
+    knowledge_dir: str | None = None,
 ) -> SessionApp:
-    """真实模式装配（可注入 settings/env 便于测试配置错误路径）。"""
-    return SessionApp.from_settings(settings, db_path=db_path, output_dir=output_dir)
+    """真实模式装配（可注入 settings/env 便于测试配置错误路径）。
+
+    `rag=True` 时**先**完整加载本地语料；路径/格式/版本错误立即抛出，绝不退化为
+    无 RAG 静默继续。默认 `rag=False`，旧调用逐字兼容。
+    """
+    knowledge_engine: Any | None = None
+    knowledge_source: KnowledgeSourceInfo | None = None
+    if rag:
+        knowledge_engine, knowledge_source = build_knowledge_engine(
+            knowledge_dir=knowledge_dir, demo=False
+        )
+    return SessionApp.from_settings(
+        settings,
+        db_path=db_path,
+        output_dir=output_dir,
+        knowledge_engine=knowledge_engine,
+        knowledge_source=knowledge_source,
+    )
 
 
 def build_demo_app(
     *,
     db_path: Path | str | None = None,
     output_dir: Path | str | None = None,
+    rag: bool = False,
+    knowledge_dir: str | None = None,
 ) -> SessionApp:
-    """离线演示装配：不需要任何凭据，不访问网络。"""
+    """离线演示装配：不需要任何凭据，不访问网络。
+
+    `--demo --rag` 只使用内置、明确标注为演示/测试的 approved 夹具；拒绝同时指定
+    `--knowledge-dir`（避免拿外部语料冒充演示审核数据）。默认 `rag=False` 兼容旧调用。
+    """
+    knowledge_engine: Any | None = None
+    knowledge_source: KnowledgeSourceInfo | None = None
+    if rag:
+        knowledge_engine, knowledge_source = build_knowledge_engine(
+            knowledge_dir=knowledge_dir, demo=True
+        )
     resolved_db = Path(db_path) if db_path is not None else PROJECT_ROOT / "data" / "cli_demo.db"
     resolved_out = (
         Path(output_dir)
@@ -995,6 +1579,8 @@ def build_demo_app(
         llm=_DemoLLM(),
         image=FakeImageProvider(),
         output_dir=resolved_out,
+        knowledge_engine=knowledge_engine,
+        knowledge_source=knowledge_source,
     )
 
 
@@ -1005,7 +1591,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m visual_intent_agent",
         description=(
-            "Visual Intent Agent 最小 CLI（MVP v0.3 工程预览版，非正式发布）。"
+            "Visual Intent Agent 最小 CLI（MVP v0.4 工程预览版；本地 RAG 可选、"
+            "默认关闭；非正式发布）。"
         ),
     )
     parser.add_argument(
@@ -1014,6 +1601,23 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help=(
             "离线演示模式：确定性 Fake Provider，无需凭据、不访问网络。"
             "演示只做预设选项/关键词映射（脚本式演示），不是真实自然语言理解。"
+        ),
+    )
+    parser.add_argument(
+        "--rag",
+        action="store_true",
+        default=False,
+        help=(
+            "显式开启本地知识检索（默认关闭）。只读取本地 JSONL 语料，"
+            "不访问远程 URL、不自动下载模型；未开启时完全不读取知识。"
+        ),
+    )
+    parser.add_argument(
+        "--knowledge-dir",
+        default=None,
+        help=(
+            "本地受审核知识目录（JSONL + manifest.json）；默认 "
+            f"{DEFAULT_KNOWLEDGE_DIR}。必须是本地路径，远程 URL 一律拒绝。"
         ),
     )
     parser.add_argument(
@@ -1028,6 +1632,41 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _render_knowledge_error(output: Console, exc: BaseException) -> None:
+    """安全、可见的知识/RAG 错误：稳定 code + 明确"未启用"（不伪装成功）。"""
+    output.print("")
+    if isinstance(exc, KnowledgeActivationError):
+        output.print(f"知识/RAG 错误 [{exc.code}]: {exc.message}")
+    else:
+        code = getattr(exc, "code", None) or type(exc).__name__
+        output.print(f"知识/RAG 错误 [{code}]: {exc}")
+    output.print(
+        "提示: --rag 未生效，本次不会以无 RAG 静默继续；请修正本地知识目录"
+        "（或去掉 --rag / --knowledge-dir）后重试。"
+    )
+
+
+def _print_rag_status(output: Console, app: SessionApp) -> None:
+    """打印已启用 RAG 的真实来源与 approved 计数（0 approved 时明确回退）。"""
+    source = app.knowledge_source
+    if source is None:
+        return
+    output.print(f"RAG 已开启：{source.label}")
+    output.print(
+        f"语料版本 {source.corpus_version}；单元 {source.all_unit_count} 条"
+        f"（approved {source.approved_unit_count} 条）。"
+    )
+    if source.approved_unit_count == 0:
+        output.print(
+            "提示: 当前语料没有 approved 单元，RAG 将按无命中透明回退，"
+            "不会采用任何知识。"
+        )
+    output.print(
+        "说明: 知识仅辅助明确委托项，不能覆盖用户指定值或 PIN，"
+        "也不代表用户确认过具体知识取值。"
+    )
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -1035,10 +1674,27 @@ def main(
     env: Any | None = None,
     env_file: Any = _UNSET,
 ) -> int:
-    """CLI 入口。真实模式先加载 `Settings`；配置失败给出可读提示并返回退出码 2。"""
+    """CLI 入口。真实模式先加载 `Settings`；配置失败给出可读提示并返回退出码 2。
+
+    `--rag` 的语料错误同样以可读提示 + 退出码 2 结束；绝不会在没有知识的情况下
+    假装 RAG 已启用。
+    """
     args = parse_args(argv)
     output = console if console is not None else SystemConsole()
     resolved_env_file = DEFAULT_ENV_FILE if env_file is _UNSET else env_file
+
+    # `--knowledge-dir` 一旦提供就先做形态校验（拒绝远程 URL），与是否开启 RAG 无关。
+    if args.knowledge_dir is not None:
+        try:
+            resolve_knowledge_dir(args.knowledge_dir)
+        except KnowledgeActivationError as exc:
+            _render_knowledge_error(output, exc)
+            return 2
+        if not args.rag:
+            output.print(
+                "提示: 已提供 --knowledge-dir，但 --rag 未开启（默认关闭）；"
+                "本次不读取任何知识目录。"
+            )
 
     if args.demo:
         output.print(
@@ -1048,7 +1704,22 @@ def main(
             "演示只识别预设选项与少量关键词（脚本式演示），不是真实自然语言理解；"
             "真实语义理解需要配置 Provider 后以默认模式运行。"
         )
-        app = build_demo_app(db_path=args.db, output_dir=args.output_dir)
+        if args.rag:
+            output.print(
+                "演示模式 RAG（--demo --rag）：使用内置演示/测试 approved 夹具语料；"
+                "它不是生产人工审核结果，也不代表真实检索或图片效果。"
+            )
+        try:
+            app = build_demo_app(
+                db_path=args.db,
+                output_dir=args.output_dir,
+                rag=args.rag,
+                knowledge_dir=args.knowledge_dir,
+            )
+        except (KnowledgeError, KnowledgeActivationError) as exc:
+            _render_knowledge_error(output, exc)
+            return 2
+        _print_rag_status(output, app)
         return _run_app(app, output)
 
     try:
@@ -1062,7 +1733,18 @@ def main(
         )
         return 2
 
-    app = build_app(settings, db_path=args.db, output_dir=args.output_dir)
+    try:
+        app = build_app(
+            settings,
+            db_path=args.db,
+            output_dir=args.output_dir,
+            rag=args.rag,
+            knowledge_dir=args.knowledge_dir,
+        )
+    except (KnowledgeError, KnowledgeActivationError) as exc:
+        _render_knowledge_error(output, exc)
+        return 2
+    _print_rag_status(output, app)
     return _run_app(app, output)
 
 

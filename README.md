@@ -26,13 +26,16 @@ SQLite Repository 保存 Intent、确认记录、Prompt、生成结果和反馈�
 - 生成前必须确认当前 Intent，重要修改会使旧确认失效。
 - 历史 Revision 与 Artifact 保持可追踪且不可覆盖。
 
-## 最小 CLI（MVP v0.3 工程预览版）
+## 最小 CLI（MVP v0.4 工程预览版）
 
-> **状态：工程预览版，非正式发布。** 本轮（r1 修订后）的真实 smoke、正式复评与
-> 人工盲评**尚未执行**；本预览版对应用户流程的结论是“未执行 / 证据不足”，既不是
-> Go，也不是 No-Go。Step 01～06 的真实历史数据与首轮结论仍然有效，本预览版不重跑、
-> 也不改写它们。
-> 详见 [docs/releases/mvp_v0.3_preview.md](docs/releases/mvp_v0.3_preview.md)。
+> **状态：工程预览版，非正式发布。** v0.4 在 v0.3 最小闭环上增加**可选、默认关闭**的
+> 本地 RAG 工程链路。生产知识库 `knowledge_base/v0.4/` 的 9 条**全部为 draft、0 条
+> approved**，仍未人工审核；`knowledge_base/v0.5/`（`corpus_version = v0.5-approved-1`）
+> 是本轮经真实人工审核（审核人 `change`，2026-09-16）批准的**独立快照**，含 5 条
+> `approved`，需用 `--knowledge-dir` 显式选择。当前离线安全测试只允许声称“工程链路可用”，
+> **不允许**声称优于无 RAG、知识质量达标或正式发布成功。
+> v0.3 的 r1 真实 smoke、正式复评与人工盲评仍未执行。详见
+> [docs/releases/mvp_v0.3_preview.md](docs/releases/mvp_v0.3_preview.md)。
 
 环境：Python 3.12 + [`uv`](https://docs.astral.sh/uv/)。安装依赖：
 
@@ -70,6 +73,44 @@ uv run python -m visual_intent_agent
 CLI 只显示模型名、Revision / Artifact ID 与本地输出路径；不打印 API key、Authorization
 或 Provider 原始响应。配置缺失时会给出可读提示并退出（退出码 2）。
 
+### 本地知识检索 RAG（v0.4，可选、默认关闭）
+
+RAG **默认关闭**；不开启时完全不读取知识、不检索、不生成 `KnowledgeBundle`，旧流程不变。
+
+```bash
+# 关闭（默认）：旧流程
+uv run python -m visual_intent_agent
+
+# 显式开启：读取本地 JSONL 语料（默认 knowledge_base/v0.4，当前全 draft）
+uv run python -m visual_intent_agent --rag
+
+# 指定本地语料目录（只接受本地路径；远程 URL 一律拒绝）
+uv run python -m visual_intent_agent --rag --knowledge-dir knowledge_base/v0.4
+
+# 选择已获真实审核的 v0.5 发布快照（5 条 approved；仍不启动正式评测）
+uv run python -m visual_intent_agent --rag --knowledge-dir knowledge_base/v0.5
+
+# 离线演示 + 内置演示/测试 approved 夹具（不是生产审核，不代表真实效果）
+uv run python -m visual_intent_agent --demo --rag
+```
+
+约定与真实状态：
+
+- `--rag` 只接受本地目录，**不读取任意远程链接、不自动下载模型或语料**；路径/格式/
+  版本错误在启动时给出可读提示并以退出码 2 结束，**不会伪装成启用成功**，也不会静默
+  退化成“无 RAG 继续运行”。
+- 仅当 `--rag` 开启时才创建 `LocalKnowledgeEngine` 并注入 `PromptEngine`；知识只能辅助
+  **仍被明确委托、且尚未有 active Realization** 的白名单路径，不能覆盖用户指定值与 PIN。
+- 确认前的摘要会显示“知识仅辅助明确委托项”，但**确认哈希算法不变**：用户确认的是已
+  展示的 Intent 与委托范围，不是任何知识取值。
+- 生成后会显示本次**采用 / 回退 / 复用**、受影响路径与 `Bundle`/知识单元来源 ID，可按
+  `bundle_id` 从 Repository 查回完整来源；界面明确说明这不代表用户确认过具体知识取值。
+- `--demo --rag` 只使用 CLI 内置、明确标注为**演示/测试**的 approved 夹具，绝不冒充生产
+  人工审核或真实检索/图片效果，也不修改生产 draft。
+- **知识库质量、检索质量、最终图片质量是三个不同结论。** `knowledge_base/v0.4/` 的 9 条
+  仍为 draft、0 条 approved；`knowledge_base/v0.5/` 的 5 条已获真实人工审核批准，但默认
+  路径仍是 v0.4，本机默认 RAG 只会透明回退到既有固定候选。工程测试通过不等于 RAG 有效。
+
 ### 交互流程
 
 ```text
@@ -105,7 +146,8 @@ uv run pytest -m smoke
 ```
 
 CLI 的离线端到端测试位于 `tests/cli/`，覆盖正常闭环、局部反馈后重新确认、timeout
-恢复、确认页不自动确认与 `--demo` 入口。
+恢复、确认页不自动确认、`--demo` 入口，以及 v0.4 的 `--rag` / `--knowledge-dir`
+参数默认与组合、非法远程路径、损坏语料、安全提示、RAG 关闭旧流程与演示 RAG 标识。
 
 ## 文档
 

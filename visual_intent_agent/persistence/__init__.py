@@ -11,9 +11,12 @@
 
     会话当前处于哪个状态，哪些 revision / confirmation / artifact 是可审计的事实？
 
-最小迁移机制通过 `PRAGMA user_version`（当前 v1，见 `schema.sql`）；底层迁移函数
+最小迁移机制通过 `PRAGMA user_version`（当前 v2：v1 的 9 张表 + v0.4 Step 03 的
+append-only `knowledge_bundles`，见 `schema.sql`）；底层迁移函数
 `apply_migrations` 与 `LATEST_SCHEMA_USER_VERSION` 从
 `visual_intent_agent.persistence.repository` 导入（用于迁移测试与诊断）。
+旧 v1 数据库由 `SQLiteRepository` 首次打开时幂等补建 `knowledge_bundles`，
+不删表、不改写旧 payload/refs。
 """
 
 from __future__ import annotations

@@ -19,7 +19,7 @@ from typing import Any, Iterable, Sequence
 
 from pydantic import SecretStr
 
-from visual_intent_agent.cli import SessionApp
+from visual_intent_agent.cli import SessionApp, build_prompt_engine
 from visual_intent_agent.config import Settings
 from visual_intent_agent.domain import ExecutionRevision, new_id
 from visual_intent_agent.feedback import FeedbackEngine
@@ -29,8 +29,6 @@ from visual_intent_agent.persistence import SQLiteRepository, WorkflowState
 from visual_intent_agent.prompt_engine import (
     QWEN_IMAGE_MODEL,
     PromptArtifact,
-    PromptEngine,
-    QwenImageRenderer,
 )
 from visual_intent_agent.providers.errors import ProviderError
 from visual_intent_agent.providers.fake_image import FakeImageProvider
@@ -141,9 +139,14 @@ def make_cli_app(
     feedback_responses: Iterable[Any] = (),
     image_provider: Any = None,
     settings: Settings | None = None,
+    knowledge_engine: Any = None,
     name: str = "cli.db",
 ) -> tuple[SessionApp, SQLiteRepository, ScriptedLLM, Path]:
-    """装配真实服务 + Fake Provider 的 `SessionApp`（全离线）。"""
+    """装配真实服务 + Fake Provider 的 `SessionApp`（全离线）。
+
+    `knowledge_engine` 默认 None（RAG 关闭，行为与接入前等价）；传入时经
+    `build_prompt_engine` 注入，仅用于离线故障注入/采用展示测试。
+    """
     repo = SQLiteRepository(tmp_path / name)
     llm = ScriptedLLM(interpreter_responses, feedback_responses)
     settings = settings if settings is not None else make_settings()
@@ -161,7 +164,7 @@ def make_cli_app(
     )
     pipeline = GenerationPipeline(
         repo=repo,
-        prompt_engine=PromptEngine(QwenImageRenderer(), repo),
+        prompt_engine=build_prompt_engine(repo, knowledge_engine=knowledge_engine),
         image_provider=image_provider if image_provider is not None else FakeImageProvider(),
         output_dir=output_dir,
     )

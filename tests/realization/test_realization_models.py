@@ -53,7 +53,7 @@ def _state(values=None, **overrides) -> RealizationState:
     return RealizationState(**fields)
 
 
-def test_realization_value_has_exactly_the_eight_frozen_fields():
+def test_realization_value_has_exactly_the_eleven_frozen_fields():
     assert list(RealizationValue.model_fields) == [
         "path",
         "value",
@@ -63,6 +63,9 @@ def test_realization_value_has_exactly_the_eight_frozen_fields():
         "status",
         "invalidated_reason",
         "invalidated_at",
+        "knowledge_bundle_id",
+        "knowledge_unit_id",
+        "knowledge_unit_version",
     ]
 
 
@@ -74,6 +77,9 @@ def test_realization_value_defaults_are_frozen_values():
     assert value.status == REALIZATION_STATUS_ACTIVE == "active"
     assert value.invalidated_reason is None
     assert value.invalidated_at is None
+    assert value.knowledge_bundle_id is None
+    assert value.knowledge_unit_id is None
+    assert value.knowledge_unit_version is None
 
 
 def test_realization_value_is_frozen_and_rejects_unknown_fields():
@@ -93,6 +99,126 @@ def test_realization_value_is_frozen_and_rejects_unknown_fields():
 def test_only_user_delegated_is_a_legal_source(source):
     with pytest.raises(ValidationError):
         _value(source=source)
+
+
+def test_realization_value_knowledge_provenance_is_optional_and_accepts_all_three():
+    value = _value(
+        knowledge_bundle_id="kbu_0123456789abcdef0123456789abcdef",
+        knowledge_unit_id="lighting-soft-v1",
+        knowledge_unit_version="1.0.0",
+    )
+    assert value.knowledge_bundle_id == "kbu_0123456789abcdef0123456789abcdef"
+    assert value.knowledge_unit_id == "lighting-soft-v1"
+    assert value.knowledge_unit_version == "1.0.0"
+    # 知识追溯不改变授权来源。
+    assert value.source == REALIZATION_SOURCE_USER_DELEGATED
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"knowledge_bundle_id": "kbu_x"},
+        {"knowledge_unit_id": "unit"},
+        {"knowledge_unit_version": "1"},
+        {"knowledge_bundle_id": "kbu_x", "knowledge_unit_id": "unit"},
+        {"knowledge_bundle_id": "kbu_x", "knowledge_unit_version": "1"},
+        {"knowledge_unit_id": "unit", "knowledge_unit_version": "1"},
+    ],
+)
+def test_realization_value_rejects_partial_knowledge_provenance(override):
+    with pytest.raises(ValidationError):
+        _value(**override)
+
+
+@pytest.mark.parametrize("blank", ["", "   ", "\t", "\n"])
+def test_realization_value_rejects_blank_knowledge_provenance(blank):
+    with pytest.raises(ValidationError):
+        _value(
+            knowledge_bundle_id=blank,
+            knowledge_unit_id="unit",
+            knowledge_unit_version="1",
+        )
+    with pytest.raises(ValidationError):
+        _value(knowledge_bundle_id=blank)
+
+
+def test_knowledge_provenance_is_not_a_new_authorization_source():
+    with pytest.raises(ValidationError):
+        _value(
+            source="knowledge",
+            knowledge_bundle_id="kbu_x",
+            knowledge_unit_id="unit",
+            knowledge_unit_version="1",
+        )
+
+
+def test_knowledge_provenance_survives_model_copy_and_json_round_trip():
+    value = _value(
+        knowledge_bundle_id="kbu_x",
+        knowledge_unit_id="lighting-soft",
+        knowledge_unit_version="1.0.0",
+    )
+    copied = value.model_copy()
+    assert copied == value
+    assert copied.knowledge_bundle_id == "kbu_x"
+    assert copied.knowledge_unit_id == "lighting-soft"
+    assert copied.knowledge_unit_version == "1.0.0"
+
+    invalidated = value.model_copy(
+        update={
+            "status": "invalidated",
+            "invalidated_reason": "user override",
+            "invalidated_at": utc_now(),
+        }
+    )
+    assert invalidated.knowledge_bundle_id == "kbu_x"
+    assert invalidated.knowledge_unit_id == "lighting-soft"
+    assert invalidated.knowledge_unit_version == "1.0.0"
+
+    restored = RealizationValue.model_validate_json(value.model_dump_json())
+    assert restored == value
+    assert restored.knowledge_unit_id == "lighting-soft"
+
+
+def test_legacy_realization_value_payload_without_knowledge_fields_is_readable():
+    legacy_json = (
+        '{"path": "lighting.character", "value": "soft", "source": "user_delegated",'
+        ' "first_prompt_artifact_id": "pra_1"}'
+    )
+    value = RealizationValue.model_validate_json(legacy_json)
+    assert value.knowledge_bundle_id is None
+    assert value.knowledge_unit_id is None
+    assert value.knowledge_unit_version is None
+    assert value.carry_policy == REALIZATION_CARRY_PRESERVE_UNTIL_INVALIDATED
+    assert value.status == REALIZATION_STATUS_ACTIVE
+
+    full_legacy_json = (
+        '{"path": "lighting.character", "value": "soft", "source": "user_delegated",'
+        ' "first_prompt_artifact_id": "pra_1",'
+        ' "carry_policy": "preserve_until_invalidated", "status": "active",'
+        ' "invalidated_reason": null, "invalidated_at": null}'
+    )
+    full = RealizationValue.model_validate_json(full_legacy_json)
+    assert full.knowledge_bundle_id is None
+    assert full.knowledge_unit_id is None
+    assert full.knowledge_unit_version is None
+    assert full.model_dump()["knowledge_unit_version"] is None
+
+
+def test_legacy_realization_state_payload_without_knowledge_fields_is_readable():
+    legacy_json = (
+        '{"schema_version": "v1", "realization_id": "rlz_1", "session_id": "ses_1",'
+        ' "based_on_intent_revision_id": "irev_1", "values": ['
+        '{"path": "lighting.character", "value": "soft", "source": "user_delegated",'
+        ' "first_prompt_artifact_id": "pra_1",'
+        ' "carry_policy": "preserve_until_invalidated", "status": "active",'
+        ' "invalidated_reason": null, "invalidated_at": null}],'
+        ' "created_at": "2026-01-01T00:00:00+00:00"}'
+    )
+    state = RealizationState.model_validate_json(legacy_json)
+    assert state.values[0].knowledge_bundle_id is None
+    assert state.values[0].knowledge_unit_version is None
+    assert RealizationState.model_validate_json(state.model_dump_json()) == state
 
 
 @pytest.mark.parametrize("status", ["pending", "expired", "ACTIVE", ""])

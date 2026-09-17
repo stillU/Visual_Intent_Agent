@@ -1,0 +1,35 @@
+{
+  "manifest_version": "frozen_manifest_v0_6",
+  "dataset_version": "bc_cases_v0_6",
+  "protocol_version": "bc_protocol_v0_6",
+  "config_version": "bc_v0_6",
+  "algorithm": "sha256",
+  "frozen_by": "MVP v0.6 Step 01（协议与样本准备，离线）",
+  "parent_manifest": null,
+  "base_dir_anchor": "repository_root（解析时必须 load_manifest(path, base_dir=<repo root>)）",
+  "rule": "v0.6 B/C 对照的预注册冻结物；任何修改必须生成新版本文件与新清单，不得覆盖。旧 v0.3 冻结物与清单只读保留，旧测试继续验证旧文件。seed 规则为 candidate-agnostic 固定哈希，不要求 B/C 数值分离；PIN 控制为“已有值 + PIN”。",
+  "knowledge_snapshot": {
+    "corpus_dir": "knowledge_base/v0.5",
+    "corpus_version": "v0.5-approved-1",
+    "corpus_fingerprint": "c961790c81d22e554672270b03a94474991a9f59315d0dab5585cc09610e81c4",
+    "retrieval_version": "lexical.v1",
+    "tokenizer_version": "keyword.v1",
+    "schema_version": "knowledge.v1"
+  },
+  "roles": {
+    "protocol": "evaluation/v0_6/protocol.md",
+    "config": "evaluation/v0_6/run_config.json",
+    "dataset": "evaluation/v0_6/cases.jsonl",
+    "annotations": "evaluation/v0_6/annotations.jsonl"
+  },
+  "files": {
+    "evaluation/v0_6/protocol.md": "70100d6f84b4347f36194ddcb2b7bbe811cff7498d82130c8fe1e3f374e93c92",
+    "evaluation/v0_6/run_config.json": "f9adae7db16974dd276df4bd3b24f8e2c709c15d07b4ee65e4369bc48439237b",
+    "evaluation/v0_6/cases.jsonl": "b5a9df73ae8b3c2b9f27becca51d5b6af6513beeb52a4b253ef377337c0be805",
+    "evaluation/v0_6/annotations.jsonl": "02f6a7508f285a1cd0ea532e9c57ac1bca037a1c4a3a419b8054ee6219fd4e84",
+    "knowledge_base/v0.5/manifest.json": "0bbeea9bbf7438bd8480e4cc56b1797368e2aa6b47c1601b0f276b44697b37d7",
+    "knowledge_base/v0.5/camera.depth_of_field.jsonl": "9a32c511b0361e181a24f926fbc679dc23be28aef0303d9e95b83eebc5ee62d3",
+    "knowledge_base/v0.5/composition.framing.jsonl": "a07af1ac94634362df14079a803c4aef50439e717f4a7ece49635b316b190609",
+    "knowledge_base/v0.5/lighting.character.jsonl": "0b159a8fd7455ae9c3bdbc2e6499014f729fe88c5ca35db52253aae2d008b8c5"
+  }
+}

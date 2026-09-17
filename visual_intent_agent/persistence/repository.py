@@ -34,7 +34,8 @@ from .records import ConfirmationRecord, SessionSnapshot, StoredArtifact
 from .state_machine import ALLOWED_TRANSITIONS, InvalidStateTransitionError, WorkflowState
 
 #: 当前 schema 的 `PRAGMA user_version`。新增迁移 = 递增并追加步骤。
-LATEST_SCHEMA_USER_VERSION = 1
+#: v2 = v1 的 9 张表 + v0.4 Step 03 的 append-only `knowledge_bundles`。
+LATEST_SCHEMA_USER_VERSION = 2
 
 _SCHEMA_FILE = Path(__file__).with_name("schema.sql")
 
@@ -53,6 +54,11 @@ _ARTIFACT_REFS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "realization_states": (
         ("based_on_intent_revision_id", "intent_revisions", "intent_revision_id"),
     ),
+    "knowledge_bundles": (
+        ("intent_revision_id", "intent_revisions", "intent_revision_id"),
+        ("execution_revision_id", "execution_revisions", "execution_revision_id"),
+        ("confirmation_id", "confirmations", "confirmation_id"),
+    ),
 }
 
 #: Artifact 表 → 主键列名。
@@ -61,6 +67,7 @@ _ARTIFACT_PK: dict[str, str] = {
     "generation_artifacts": "generation_id",
     "feedback_results": "feedback_id",
     "realization_states": "realization_id",
+    "knowledge_bundles": "bundle_id",
 }
 
 
@@ -204,9 +211,16 @@ def _translate_sqlite_error(exc: sqlite3.IntegrityError) -> RepositoryError:
 def apply_migrations(conn: sqlite3.Connection) -> int:
     """按 `PRAGMA user_version` 应用最小迁移，返回应用后的版本。
 
-    - `user_version == 0` → 执行 v1 DDL 并置 1（全部 `IF NOT EXISTS`，失败可重跑）；
+    - `user_version == 0` → 执行当前 DDL（v2，10 张表）并置 2；
+    - `user_version == 1` → 幂等补建 v2 新增的 `knowledge_bundles`（及其索引）；
+      schema.sql 的其余语句全部 `IF NOT EXISTS`，在 v1 库上是 no-op，**不删表、
+      不改写旧 payload/refs**；随后置 2；
     - `user_version == LATEST_SCHEMA_USER_VERSION` → 不做任何事；
     - `user_version > LATEST_SCHEMA_USER_VERSION` → 显式拒绝（新库被旧代码打开）。
+
+    v0 与 v1 都通过重放同一份幂等 DDL 升级：这是本模块自 Step 04 起的既有约定
+    （见 schema.sql 头部注释），因此新增迁移只需向 schema.sql 追加 `IF NOT EXISTS`
+    对象并递增 `LATEST_SCHEMA_USER_VERSION`，不需要改写为迁移脚本。
     """
     version = int(conn.execute("PRAGMA user_version").fetchone()[0])
     if version > LATEST_SCHEMA_USER_VERSION:
@@ -296,6 +310,15 @@ class Repository(Protocol):
     ) -> None: ...
 
     def get_current_realization_state(self, session_id: str) -> StoredArtifact | None: ...
+
+    # 知识 Bundle 信封（v0.4 Step 03；refs 精确三键见 _ARTIFACT_REFS，append-only）
+    def append_knowledge_bundle(
+        self, bundle_id: str, session_id: str, refs: dict[str, str], payload: str
+    ) -> None: ...
+
+    def get_knowledge_bundle(self, bundle_id: str) -> StoredArtifact: ...
+
+    def list_knowledge_bundles(self, session_id: str) -> list[StoredArtifact]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -795,6 +818,33 @@ class SQLiteRepository:
             if row is None:
                 return None
             return self._row_to_artifact(row, "realization_id")
+
+    # -- 知识 Bundle 信封（append-only） -----------------------------------
+
+    def append_knowledge_bundle(
+        self, bundle_id: str, session_id: str, refs: dict[str, str], payload: str
+    ) -> None:
+        """写入一条不可变 KnowledgeBundle 快照；重复 bundle_id 显式拒绝。
+
+        refs 必须是精确三键 `intent_revision_id` / `execution_revision_id` /
+        `confirmation_id`，且三条被引用记录都必须存在并属于 `session_id`。
+        """
+        self._append_artifact("knowledge_bundles", bundle_id, session_id, refs, payload)
+
+    def get_knowledge_bundle(self, bundle_id: str) -> StoredArtifact:
+        return self._get_artifact("knowledge_bundles", bundle_id)
+
+    def list_knowledge_bundles(self, session_id: str) -> list[StoredArtifact]:
+        """本会话的全部 Bundle，按 `created_at, rowid` 升序（插入顺序稳定）。"""
+        _require_non_empty(session_id, "session_id")
+        with self._read() as conn:
+            _require_session(conn, session_id)
+            rows = conn.execute(
+                "SELECT bundle_id, session_id, refs_json, payload, created_at "
+                "FROM knowledge_bundles WHERE session_id = ? ORDER BY created_at, rowid",
+                (session_id,),
+            ).fetchall()
+            return [self._row_to_artifact(row, "bundle_id") for row in rows]
 
     # -- 内部辅助 -----------------------------------------------------------
 
