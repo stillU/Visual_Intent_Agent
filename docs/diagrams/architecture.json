@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Visual Intent Agent · 项目架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1300,
+      760
+    ]
+  },
+  "components": [
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "用户交互",
+      "sublabel": "CLI · 需求 / 确认 / 反馈",
+      "pos": [
+        40,
+        320
+      ],
+      "size": [
+        190,
+        82
+      ]
+    },
+    {
+      "id": "workflow",
+      "type": "backend",
+      "label": "意图与工作流",
+      "sublabel": "理解 → 校验 → 澄清 → 确认",
+      "pos": [
+        370,
+        320
+      ],
+      "size": [
+        230,
+        82
+      ]
+    },
+    {
+      "id": "prompt",
+      "type": "backend",
+      "label": "提示词编译",
+      "sublabel": "PromptEngine · 确定性编译",
+      "pos": [
+        720,
+        320
+      ],
+      "size": [
+        230,
+        82
+      ]
+    },
+    {
+      "id": "generate",
+      "type": "backend",
+      "label": "图片生成",
+      "sublabel": "GenerationPipeline",
+      "pos": [
+        1080,
+        320
+      ],
+      "size": [
+        190,
+        82
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "语言模型",
+      "sublabel": "候选变更 · 不直接修改状态",
+      "pos": [
+        370,
+        80
+      ],
+      "size": [
+        230,
+        82
+      ]
+    },
+    {
+      "id": "knowledge",
+      "type": "database",
+      "label": "可选本地知识库",
+      "sublabel": "审核 JSONL → 词法检索",
+      "pos": [
+        720,
+        80
+      ],
+      "size": [
+        230,
+        82
+      ]
+    },
+    {
+      "id": "image",
+      "type": "external",
+      "label": "图片模型",
+      "sublabel": "ImageProvider · 外部服务",
+      "pos": [
+        1080,
+        80
+      ],
+      "size": [
+        190,
+        82
+      ]
+    },
+    {
+      "id": "review",
+      "type": "backend",
+      "label": "反馈修订",
+      "sublabel": "FeedbackEngine / ReviewService",
+      "pos": [
+        40,
+        570
+      ],
+      "size": [
+        260,
+        82
+      ]
+    },
+    {
+      "id": "repo",
+      "type": "database",
+      "label": "SQLite 业务数据库",
+      "sublabel": "意图 / 确认 / 产物 / 知识审计",
+      "pos": [
+        370,
+        570
+      ],
+      "size": [
+        270,
+        82
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "本地图片文件",
+      "sublabel": "生成输出 · 路径关联 Artifact",
+      "pos": [
+        1080,
+        570
+      ],
+      "size": [
+        190,
+        82
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "cli",
+      "to": "workflow",
+      "label": "提交需求",
+      "variant": "emphasis"
+    },
+    {
+      "from": "workflow",
+      "to": "prompt",
+      "label": "确认后编译",
+      "variant": "emphasis"
+    },
+    {
+      "from": "prompt",
+      "to": "generate",
+      "label": "Prompt",
+      "variant": "emphasis"
+    },
+    {
+      "from": "llm",
+      "to": "workflow",
+      "label": "意图解析",
+      "labelAt": [485, 240]
+    },
+    {
+      "from": "knowledge",
+      "to": "prompt",
+      "label": "委托项建议",
+      "labelAt": [835, 240],
+      "variant": "dashed"
+    },
+    {
+      "from": "generate",
+      "to": "image",
+      "label": "生成请求"
+    },
+    {
+      "from": "generate",
+      "to": "files",
+      "label": "保存图片",
+      "labelAt": [1175, 480]
+    },
+    {
+      "from": "cli",
+      "to": "review",
+      "label": "提交反馈",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "review",
+      "to": "workflow",
+      "label": "修订后再确认"
+    },
+    {
+      "from": "workflow",
+      "to": "repo",
+      "label": "版本与状态",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "用户始终掌握决策",
+      "items": [
+        "重要变更重新确认；明确值与 PIN 不被知识覆盖。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "知识不替代数据库",
+      "items": [
+        "仅辅助光照、构图、景深；编译与生成也通过 Repository 记录产物。"
+      ]
+    }
+  ]
+}
