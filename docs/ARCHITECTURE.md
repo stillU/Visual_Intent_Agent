@@ -22,6 +22,11 @@ PromptEngine/Repository 接入与 CLI（见下文 Rev.5～Rev.7）。v0.5 新增
 `docs/handoffs/architecture_decision_005.md`；v0.5 发布与验收见
 `docs/handoffs/v0_5_release_handoff.md`。
 
+候选交付整理（2026-09-18，应用版本 v1.0.0rc1）：v1.0 任务书的 Step 01～04 只统一了版本展示、
+补充无凭据配置模板、整理文档并产出交接，**未改动**本文冻结的 Step 01～09 接口、数据库 Schema、
+领域合同、已批准语料或评测冻结物；本轮未运行测试或验证。范围与未执行项见
+`docs/releases/v1.0.0rc1.md` 与 `docs/handoffs/v1_0_handoff.md`。
+
 实施范围：仅 Step 01～09（P0～P3 核心闭环）。Step 10（Gate A）与 Step 11
 （KnowledgeEngine）本轮不实施，本文不为其定义任何模块、表或配置；仅在第 10 节
 说明现有边界为何不阻碍其后续接入。

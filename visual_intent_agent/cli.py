@@ -1,4 +1,4 @@
-"""MVP v0.4 工程预览版：最小 CLI 入口（Step 08 起，v0.4 Step 04 增加 RAG 开关）。
+"""v1.0.0rc1 候选交付：最小 CLI 入口（Step 08 起，v0.4 Step 04 增加 RAG 开关）。
 
 职责边界（任务书 08「实施内容」/「禁止范围」、v0.4 Step 04）：
 
@@ -58,6 +58,7 @@ from typing import Any, Protocol, Sequence
 
 from pydantic import SecretStr
 
+from visual_intent_agent import __version__ as PACKAGE_VERSION
 from visual_intent_agent.config import (
     DEFAULT_ENV_FILE,
     PROJECT_ROOT,
@@ -150,10 +151,13 @@ __all__ = [
     "RETRY_PROMPT_EXPIRED",
 ]
 
-#: 预览版标识（正式版本状态见 docs/releases/；本轮不声称正式发布）。
+#: 版本展示：版本号唯一来源为包 `__version__`（visual_intent_agent/__init__.py），
+#: 避免多处硬编码。当前为候选交付标识：本轮仅静态整理，未测试/未运行验证，
+#: 不是已验证的正式稳定发布（正式版本状态见 docs/releases/）。
 CLI_VERSION = (
-    "visual-intent-agent MVP v0.4 engineering preview "
-    "(optional local RAG, off by default; not a formal release)"
+    f"visual-intent-agent {PACKAGE_VERSION} "
+    "(release candidate; optional local RAG, off by default; "
+    "not a verified stable release)"
 )
 
 #: `--rag` 未给 `--knowledge-dir` 时的默认本地语料目录（生产 v0.4 语料，当前全 draft）。
@@ -201,8 +205,9 @@ _HANDLED_ERRORS = (
 )
 
 _PREVIEW_BANNER = (
-    "Visual Intent Agent —— MVP v0.4 工程预览版（本地 RAG 可选、默认关闭；非正式发布）\n"
-    "本预览版本轮未执行真实 smoke / 正式复评 / 人工盲评；只提供最小可操作闭环。\n"
+    f"Visual Intent Agent —— {PACKAGE_VERSION} 候选交付"
+    "（本地 RAG 可选、默认关闭；本轮仅静态整理，未测试/未验证，非正式稳定发布）\n"
+    "本候选交付本轮未执行真实 smoke / 正式复评 / 人工盲评；只提供最小可操作闭环。\n"
     "知识库尚未人工批准时，--rag 只验证工程链路，不代表知识质量或真实收益。\n"
     "输入 exit 可随时退出；反馈与澄清阶段不会自动确认。"
 )
@@ -1591,8 +1596,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m visual_intent_agent",
         description=(
-            "Visual Intent Agent 最小 CLI（MVP v0.4 工程预览版；本地 RAG 可选、"
-            "默认关闭；非正式发布）。"
+            f"Visual Intent Agent 最小 CLI（{PACKAGE_VERSION} 候选交付；本地 RAG 可选、"
+            "默认关闭；本轮未测试/未验证，非正式稳定发布）。"
         ),
     )
     parser.add_argument(

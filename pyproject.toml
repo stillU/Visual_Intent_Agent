@@ -1,7 +1,7 @@
 [project]
 name = "visual-intent-agent"
-version = "0.1.0"
-description = "Visual Intent Agent MVP v0.2: structured VisualIntent -> clarification -> hard confirmation -> prompt -> image generation"
+version = "1.0.0rc1"
+description = "Visual Intent Agent v1.0.0rc1 (candidate): structured VisualIntent -> clarification -> hard confirmation -> prompt -> image generation"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
